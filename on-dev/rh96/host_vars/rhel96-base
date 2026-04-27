@@ -1,0 +1,44 @@
+---
+ansible_host: 192.168.8.116
+ansible_user: root
+ansible_ssh_pass: Dellsvcs1
+
+product_key: 044640-462613-957662-106274-112556
+
+license:
+  country: US
+  locality: Thornton
+  state: Colorado
+  organization: DellHPCTestLab
+  organizational_unit: IT
+  cluster_name: jah-cluster
+  mac: "{{ ansible_default_ipv4.macaddress }}"
+
+db_cmd_password: Dellsvcs1
+slurm_user_pass: Dellsvcs1
+ldap_root_pass: Dellsvcs1
+ldap_readonly_pass: Dellsvcs1
+
+install_medium: local
+install_medium_local_repo_path:
+ - /root/cm.repo
+
+#install_medium: dvd
+#install_medium_dvd_path: "/mnt/data/bcm-11.0-rocky9u6.iso"
+
+mysql_login_user: root
+mysql_login_password: Dellsvcs1
+
+# Network configuration
+management_interface: enp6s19
+management_ip_address: 172.16.0.1
+management_network_baseaddress: 172.16.0.0
+management_network_netmask: 255.255.252.0
+
+external_interface: enp6s18  # Adjust if different
+external_ip_address: DHCP
+
+post_install_default_image_archive: /root/RHEL9u7.tar.gz
+
+# Keep HPC packages - you might need them
+skip_install_hpc_packages: false  
