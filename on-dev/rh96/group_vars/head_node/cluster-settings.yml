@@ -1,7 +1,7 @@
 ---
 # General cluster settings - External (DHCP)
 external_network_domain: hpc.somecustomer.com
-external_interface: eth0
+external_interface: enp6s18
 external_ip_address: DHCP
 external_network_gateway: "{{ ansible_facts[external_interface].ipv4.address }}"
 
@@ -14,18 +14,16 @@ external_network_gateway: "{{ ansible_facts[external_interface].ipv4.address }}"
 
 
 # Managemenet Interface (the internal interface)
-management_interface: eth1
+management_interface: enp6s19
 management_ip_address: 172.16.0.1
 management_network_baseaddress: 172.16.0.0
 
 ## External Services 
 external_name_servers: [8.8.8.8]
 
-## Installing as Online Repo
-#install_medium: repo
-#install_medium_network_packages:
-#  - "http://example.com/cm-config-cm.all.rpm"
-#  - "http://example.com/cm-config-yum.all.rpm"
+install_medium: local
+install_medium_local_repo_path:
+ - /root/cm.repo
 
 ## Installing as Network
 #install_medium: network
@@ -34,18 +32,10 @@ external_name_servers: [8.8.8.8]
 #  - "http://example.com/cm-config-yum.all.rpm"
 
 ## Installing as DVD
-install_medium: dvd
-install_medium_dvd_path: /root/BCM11-Rocky96.iso
+# install_medium: dvd
+# install_medium_dvd_path: /root/BCM11-Rocky96.iso
 
 timezone: America/Denver
-license:
-  country: US
-  state: Colorado
-  locality: Denver
-  organization: Dell Technologies
-  organizational_unit: DellHPC 
-  cluster_name: JASH-Cluster
-  mac: "{{ ansible_default_ipv4.macaddress }}"
 
 post_install_default_image_archive: /root/RHEL9u6.tar.gz
 cm_create_image_extra_args: ""
