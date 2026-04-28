@@ -1,0 +1,205 @@
+---
+- name: Prepare RHEL 9.x Head Node for BCM Installation
+  hosts: head_node
+  become: yes
+  gather_facts: yes
+  vars:
+    controller_pubkey: "{{ lookup('file', '~/.ssh/id_ed25519.pub') }}"
+
+  tasks:
+    - name: Display target host information
+      debug:
+        msg: "Preparing {{ ansible_hostname }} ({{ ansible_default_ipv4.address }}) for {{ install_medium | upper }} installation"
+
+    - name: Ensure /root/.ssh directory exists
+      file:
+        path: /root/.ssh
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+
+    - name: Add controller SSH public key to authorized_keys
+      authorized_key:
+        user: root
+        state: present
+        key: "{{ controller_pubkey }}"
+      when: ansible_connection == 'ssh'
+
+    - name: Install EPEL repository
+      dnf:
+        name: epel-release
+        state: present
+
+    - name: Remove MySQL if present (conflicts with MariaDB)
+      dnf:
+        name:
+          - mysql
+          - mysql-server
+          - mysql-common
+          - mysql-community-server
+          - mysql-community-client
+        state: absent
+      ignore_errors: yes  # OK if none of these are installed
+
+    - name: Install required packages
+      dnf:
+        name:
+          - python3
+          - python3-pip
+          - mariadb-server
+          - python3-PyMySQL
+        state: present
+
+    - name: Stop MariaDB if running (pre-cleanup)
+      systemd:
+        name: mariadb
+        state: stopped
+      ignore_errors: yes
+
+    - name: Remove leftover MySQL/MariaDB data directory
+      file:
+        path: /var/lib/mysql
+        state: absent
+
+    - name: Recreate empty data directory with correct ownership
+      file:
+        path: /var/lib/mysql
+        state: directory
+        owner: mysql
+        group: mysql
+        mode: '0755'
+
+    - name: Initialize MariaDB database
+      command: mariadb-install-db --user=mysql --datadir=/var/lib/mysql
+      args:
+        creates: /var/lib/mysql/mysql  # Only runs if not already initialized
+
+    - name: Start and enable MariaDB service
+      systemd:
+        name: mariadb
+        state: started
+        enabled: yes
+
+    - name: Set MariaDB root password
+      mysql_user:
+        name: root
+        password: "{{ mysql_login_password }}"
+        login_unix_socket: /var/lib/mysql/mysql.sock
+        state: present
+      ignore_errors: yes  # In case password is already set
+
+    - name: Validate MariaDB root password
+      shell: "mysql -u root -p'{{ mysql_login_password }}' -e 'SELECT 1'"
+      register: password_test
+      failed_when: password_test.rc != 0
+
+    - name: Display MariaDB validation result
+      debug:
+        msg: "? MariaDB root password validated successfully"
+      when: password_test is succeeded
+
+    - name: Check if SELinux is disabled
+      command: getenforce
+      register: selinux_status
+      changed_when: false
+
+    # INSTALLATION METHOD VALIDATION
+    - name: Validate installation medium (DVD)
+      block:
+        - name: Check if ISO file exists
+          stat:
+            path: "{{ install_medium_dvd_path }}"
+          register: iso_check
+
+        - name: Fail if ISO is missing
+          fail:
+            msg: "ERROR: ISO file not found at {{ install_medium_dvd_path }}"
+          when: not iso_check.stat.exists
+
+        - name: Display ISO validation result
+          debug:
+            msg:
+              - "? ISO file validated:"
+              - "  Path: {{ install_medium_dvd_path }}"
+              - "  Size: {{ (iso_check.stat.size / 1024 / 1024 / 1024) | round(2) }} GB"
+
+      when: install_medium == 'dvd'
+
+    - name: Validate installation medium (Local)
+      block:
+        - name: Check if cm.repo exists
+          stat:
+            path: /root/cm.repo
+          register: local_repo_check
+
+        - name: Fail if cm.repo is missing
+          fail:
+            msg: "ERROR: cm.repo not found at /root/cm.repo"
+          when: not local_repo_check.stat.exists
+
+        - name: Display local repo validation result
+          debug:
+            msg: "? Local repository configured and validated"
+
+      when: install_medium == 'local'
+
+    - name: Disable SELinux (runtime)
+      command: setenforce 0
+      when: selinux_status.stdout != "Disabled"
+      ignore_errors: yes
+
+    - name: Disable SELinux (persistent)
+      lineinfile:
+        path: /etc/selinux/config
+        regexp: '^SELINUX='
+        line: 'SELINUX=disabled'
+        state: present
+
+    # CM.REPO HANDLING - LOCAL METHOD ONLY
+    - name: Handle cm.repo for local installation
+      block:
+        - name: Check if cm.repo exists on head node
+          stat:
+            path: /root/cm.repo
+          register: cm_repo_check
+
+        - name: Copy cm.repo from controller if missing
+          copy:
+            src: files/cm.repo
+            dest: /root/cm.repo
+            owner: root
+            group: root
+            mode: '0644'
+          when: not cm_repo_check.stat.exists
+
+        - name: Set GPGcheck to 0 in cm.repo
+          lineinfile:
+            path: /root/cm.repo
+            regexp: '^gpgcheck='
+            line: 'gpgcheck=0'
+            state: present
+
+        - name: Verify cm.repo configuration
+          command: grep -E '^(baseurl|gpgcheck)' /root/cm.repo
+          register: cm_repo_config
+          changed_when: false
+
+        - name: Display cm.repo status
+          debug:
+            msg:
+              - "cm.repo configured for local installation:"
+              - "{{ cm_repo_config.stdout }}"
+
+      when: install_medium == 'local'
+
+    - name: Display summary
+      debug:
+        msg:
+          - "Head node preparation complete!"
+          - "SSH key: Added for controller"
+          - "MariaDB: Running and validated ?"
+          - "SELinux: {{ selinux_status.stdout }}"
+          - "Installation method: {{ install_medium | upper }}"
+          - "Installation medium: Validated ?"
+          - "Ready for BCM installation"

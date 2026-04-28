@@ -3,6 +3,16 @@
   hosts: image_target
   become: yes
   tasks:
+    - name: Quiesce the system before archive
+      block:
+        - name: Sync filesystems
+          command: sync
+        - name: Drop caches
+          command: echo 3 > /proc/sys/vm/drop_caches
+        - name: Wait for system to stabilize
+          pause:
+            seconds: 5
+
     - name: Run the Bright Computing archive module
       brightcomputing.installer110.vm_archive:
         os_family: RedHat
@@ -10,10 +20,16 @@
         ignore_file_changed: true
         extra_excludes:
           - /root/ansible
+      register: archive_result
+      until: archive_result is succeeded
+      retries: 2
+      delay: 30
+
     - name: Verify archive file and display size
       stat:
         path: "/root/{{ image_filename | default('RHEL9u6.tar.gz') }}"
       register: archive_stat
+
     - name: Display archive file info
       debug:
         msg: "Archive created: {{ archive_stat.stat.path }} ({{ (archive_stat.stat.size / 1024 / 1024 / 1024) | round(2) }} GB)"

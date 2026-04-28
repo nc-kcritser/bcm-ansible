@@ -1,0 +1,17 @@
+---
+# Select installation method: 'dvd' or 'local'
+install_medium: dvd
+
+#### DVD installation
+install_medium_dvd_path: /root/bcm-11.0-rocky9u6.iso
+# install_medium_dvd_checksum_path:  <optional>
+
+#### Local repository installation
+install_medium_local_repo_path:
+  - /root/cm.repo
+
+install_medium_network_packages:
+  - "http://example.com/cm-config-cm.all.rpm"
+  - "http://example.com/cm-config-yum.all.rpm"
+
+

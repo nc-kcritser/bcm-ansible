@@ -1,0 +1,74 @@
+---
+- name: Install BCM 11 on RHEL 9.6 via DVD
+  hosts: head_node
+  become: yes
+  gather_facts: yes
+  collections:
+    - brightcomputing.installer110
+    - ansible.posix
+  pre_tasks:
+    - name: Verify installation method is DVD
+      assert:
+        that:
+          - install_medium == 'dvd'
+        fail_msg: "This playbook is for DVD installation only. Current method: {{ install_medium }}"
+      tags:
+        - always
+
+    - name: Check for required installation files
+      stat:
+        path: "{{ item }}"
+      register: file_check
+      loop:
+        - "{{ install_medium_dvd_path }}"
+        - "{{ post_install_default_image_archive }}"
+      tags:
+        - always
+
+    - name: Verify all required files exist
+      assert:
+        that:
+          - item.stat.exists
+        fail_msg: "Required file missing: {{ item.item }}"
+      loop: "{{ file_check.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      tags:
+        - always
+
+    - name: Display installation configuration
+      debug:
+        msg:
+          - "Installing BCM 11 via DVD"
+          - "ISO: {{ install_medium_dvd_path }}"
+          - "Image: {{ post_install_default_image_archive }}"
+      tags:
+        - always
+
+    - name: Create mount point for DVD
+      file:
+        path: /mnt/dvd
+        state: directory
+      tags:
+        - always
+
+    - name: Mount BCM DVD ISO
+      mount:
+        path: /mnt/dvd
+        src: "{{ install_medium_dvd_path }}"
+        fstype: iso9660
+        opts: loop,ro
+        state: mounted
+      tags:
+        - always
+
+    - name: Verify DVD mount
+      stat:
+        path: /mnt/dvd/data/packages
+      register: dvd_mount_check
+      failed_when: not dvd_mount_check.stat.exists
+      tags:
+        - always
+
+  roles:
+    - role: brightcomputing.installer110.head_node

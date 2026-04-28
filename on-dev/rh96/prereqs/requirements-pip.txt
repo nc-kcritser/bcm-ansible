@@ -1,0 +1,5 @@
+ansible-core>=2.15.0
+jmespath==0.10.0
+xmltodict==0.12.0
+netaddr
+paramiko

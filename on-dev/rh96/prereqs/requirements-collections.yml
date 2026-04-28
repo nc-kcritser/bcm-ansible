@@ -1,0 +1,10 @@
+---
+collections:
+  - name: ansible.netcommon
+    version: "5.3.0"
+  - name: community.general
+  - name: community.crypto
+  - name: community.mysql
+  - name: ansible.utils
+  - name: ansible.posix
+  - name: brightcomputing.installer110

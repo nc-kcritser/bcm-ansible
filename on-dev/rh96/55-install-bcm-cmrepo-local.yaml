@@ -1,0 +1,31 @@
+---
+- name: Install BCM 11 on RHEL 9.6
+  hosts: head_node
+  become: yes
+  gather_facts: yes
+  collections:
+    - brightcomputing.installer110
+  pre_tasks:
+    - name: Check for required installation files
+      stat:
+        path: "{{ item }}"
+      register: file_check
+      loop:
+        - "{{ install_medium_local_repo_path[0] }}"
+        - "{{ post_install_default_image_archive }}"
+      tags:
+        - always
+    
+    - name: Verify all required files exist
+      assert:
+        that:
+          - item.stat.exists
+        fail_msg: "Required file missing: {{ item.item }}"
+      loop: "{{ file_check.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+      tags:
+        - always
+  
+  roles:
+    - role: brightcomputing.installer110.head_node
