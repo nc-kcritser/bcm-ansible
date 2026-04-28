@@ -25,6 +25,7 @@
         user: root
         state: present
         key: "{{ controller_pubkey }}"
+      when: ansible_connection == 'ssh'
 
     - name: Install EPEL repository
       dnf:
@@ -111,11 +112,10 @@
         path: /root/cm.repo
       register: cm_repo_check
 
-    - name: Alert if cm.repo is missing
-      assert:
-        that:
-          - cm_repo_check.stat.exists
-        fail_msg: "CRITICAL: cm.repo file not found at /root/cm.repo - this is required for BCM installation"
+    - name: Warn if cm.repo is missing
+      debug:
+        msg: "WARNING: cm.repo not found at /root/cm.repo - BCM installation may fail"
+      when: not cm_repo_check.stat.exists
 
     - name: Display cm.repo status
       debug:

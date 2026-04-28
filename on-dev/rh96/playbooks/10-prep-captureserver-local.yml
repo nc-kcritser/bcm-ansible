@@ -1,0 +1,79 @@
+---
+- name: Prepare RHEL 9.x Node for Image Capture
+  hosts: localhost
+  become: yes
+  gather_facts: yes
+  connection: local
+  vars:
+    mysql_root_password: "Dellsvcs1"  # Match what's in host_vars
+    controller_pubkey: "{{ lookup('file', '~/.ssh/id_ed25519.pub') }}"
+
+  tasks:
+    - name: Verify Ansible version 2.10 or higher
+      assert:
+        that:
+          - ansible_version.major > 2 or (ansible_version.major == 2 and ansible_version.minor >= 10)
+        fail_msg: "Ansible 2.10 or higher is required (current version: {{ ansible_version.full }})"
+
+    - name: Display target host information
+      debug:
+        msg: "Preparing {{ ansible_hostname }} ({{ ansible_default_ipv4.address }})"
+
+    - name: Ensure /root/.ssh directory exists
+      file:
+        path: /root/.ssh
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+
+    - name: Add controller SSH public key to authorized_keys
+      authorized_key:
+        user: root
+        state: present
+        key: "{{ controller_pubkey }}"
+      when: ansible_connection != 'local'
+
+    - name: Install EPEL repository
+      dnf:
+        name: epel-release
+        state: present
+
+    - name: Install Required Python Pip Modules for Controller Side Ansible
+      pip:
+        name:
+          - jmespath
+          - xmltodict
+          - netaddr
+        state: present
+        executable: /usr/bin/pip3
+
+    - name: Check if SELinux is disabled
+      command: getenforce
+      register: selinux_status
+      changed_when: false
+
+    - name: Disable SELinux (runtime)
+      command: setenforce 0
+      when: selinux_status.stdout != "Disabled"
+      ignore_errors: yes
+
+    - name: Disable SELinux (persistent)
+      lineinfile:
+        path: /etc/selinux/config
+        regexp: '^SELINUX='
+        line: 'SELINUX=disabled'
+        state: present
+      register: selinux_persistent_change
+
+    - name: Alert reboot required if SELinux config was changed
+      debug:
+        msg: "WARNING: SELinux persistent configuration was changed. A reboot is required for the changes to take effect."
+      when: selinux_persistent_change.changed
+
+    - name: Display summary
+      debug:
+        msg:
+          - "Head node preparation complete!"
+          - "SELinux: {{ selinux_status.stdout }}"
+          - "Ready for Cloning."

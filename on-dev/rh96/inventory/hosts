@@ -1,2 +1,5 @@
 [head_node]
 rhel96-base
+
+[image_target]
+rhel96-base
