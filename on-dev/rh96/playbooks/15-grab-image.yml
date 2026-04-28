@@ -1,0 +1,14 @@
+---
+- name: grab base image
+  hosts: 127.0.0.1
+  become: yes
+
+  tasks:
+    - name: Run the Bright Computing archive module
+      brightcomputing.installer110.vm_archive:
+        os_family: RedHat
+        dest: /root/RHEL9u7.tar.gz
+        ignore_file_changed: true
+        extra_excludes:
+          - /root/ansible
+        # - /tmp

@@ -1,5 +1,5 @@
 ---
-- name: Prepare RHEL 9.7 Head Node for BCM Installation
+- name: Prepare RHEL 9.x Head Node for BCM Installation
   hosts: head_node
   become: yes
   gather_facts: yes
@@ -110,6 +110,12 @@
       stat:
         path: /root/cm.repo
       register: cm_repo_check
+
+    - name: Alert if cm.repo is missing
+      assert:
+        that:
+          - cm_repo_check.stat.exists
+        fail_msg: "CRITICAL: cm.repo file not found at /root/cm.repo - this is required for BCM installation"
 
     - name: Display cm.repo status
       debug:
