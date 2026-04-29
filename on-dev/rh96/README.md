@@ -75,3 +75,24 @@ Ensure you have internet access and try again:
 ```bash
 ansible-galaxy collection install brightcomputing.installer110 --force
 ```
+
+
+## Overriding Image Filename
+
+By default, the image capture playbook creates `RHEL9u6.tar.gz`. To use a different filename, pass the `-e` flag:
+
+```bash
+ansible-playbook playbooks/15-grab-image.yml -i inventory/localhost -e "image_filename=RHEL9u7.tar.gz"
+```
+
+The filename is used in:
+- The output archive: `/root/<image_filename>`
+- The verification task
+
+Example:
+```bash
+# Create RHEL9u7.tar.gz instead of default RHEL9u6.tar.gz
+ansible-playbook playbooks/15-grab-image.yml -i inventory/localhost -e "image_filename=RHEL9u7.tar.gz"
+
+# Create a timestamped archive
+ansible-playbook playbooks/15-grab-image.yml -i inventory/localhost -e "image_filename=RHEL9u6-$(date +%Y%m%d).tar.gz"

@@ -19,7 +19,7 @@ fi
 
 # 2. Install base system packages
 echo "Installing base system packages..."
-dnf install -y python3-pip tmux curl wget 
+dnf install -y python3-pip tmux
 
 # 3. Install Python dependencies from prereqs/requirements-pip.txt
 echo "Installing Python dependencies from requirements..."
