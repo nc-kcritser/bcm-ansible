@@ -1,0 +1,5 @@
+[head_node]
+localhost ansible_connection=local
+
+[image_target]
+localhost ansible_connection=local

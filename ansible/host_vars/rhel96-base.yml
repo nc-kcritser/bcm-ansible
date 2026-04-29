@@ -1,0 +1,4 @@
+---
+ansible_host: 172.18.10.121
+ansible_user: root
+ansible_connection: ssh

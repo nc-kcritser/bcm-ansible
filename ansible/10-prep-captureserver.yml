@@ -1,5 +1,5 @@
 ---
-- name: Prepare RHEL 9.x  Node for Image Capture
+- name: Prepare RHEL 9.x Node for Image Capture
   hosts: head_node
   become: yes
   gather_facts: yes

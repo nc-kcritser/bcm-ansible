@@ -1,0 +1,37 @@
+---
+
+# Post-install
+post_install_default_image_archive: /root/RHEL9u6.tar.gz
+cm_create_image_extra_args: ""
+
+# General cluster settings - External (DHCP)
+external_network_name: externalnet
+external_interface: enp6s18
+external_ip_address: DHCP
+external_network_gateway: "{{ ansible_facts[external_interface].ipv4.address }}"
+
+### For Static Use
+# external_network_name: externalnet
+# external_interface: enp6s18
+# external_network_baseaddress: 172.18.10.121
+# external_network_netmask: 255.255.255.0
+# external_network_gateway: 172.18.10.1
+# external_network_domain: hpc.somecustomer.com
+
+# Management Interface (the internal interface)
+management_network_name: internalnet
+management_interface: enp6s19
+management_ip_address: 172.16.0.1
+management_network_baseaddress: 172.16.0.0
+management_network_netmask: 255.255.252.0
+
+# DHCP Offset in integer ()
+management_network_network_dns_range_start_offset: 768
+management_network_network_dns_range_end_offset: 1022
+
+# External Services (Multiples are separated by commas.)
+external_name_servers: [8.8.8.8, 8.8.4.4]
+
+# Timezone
+timezone: America/Denver
+
