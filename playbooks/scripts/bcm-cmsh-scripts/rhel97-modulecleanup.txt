@@ -1,0 +1,19 @@
+softwareimage
+use default-image
+kernelmodules
+remove 3w-9xxx 
+remove 3w-xxxx 
+remove aic79xx 
+remove aic7xxx 
+remove arcmsr 
+remove cciss 
+remove ext3 
+remove forcedeth 
+remove mpt2sas 
+remove sata_nv 
+remove sata_sil 
+remove sata_svw 
+remove virtio 
+remove virtio_pci 
+remove virtio_ring
+commit -w

@@ -12,7 +12,7 @@ usage() {
     cat << EOF
 Usage: $(basename "$0") [OPTIONS]
 
-Prepare a node for image capture. Can target local machine or remote host.
+Prepare RHEL 9.x head node for BCM installation. Can target local or remote host.
 
 OPTIONS:
     --local             Use localhost inventory (default)
@@ -21,11 +21,11 @@ OPTIONS:
     -h, --help          Show this help message
 
 EXAMPLES:
-    # Prepare local machine
+    # Prepare local head node
     $(basename "$0") --local
 
-    # Prepare remote host
-    $(basename "$0") --hosts
+    # Prepare remote head node
+    $(basename "$0") --remote
 
     # With verbose output
     $(basename "$0") --remote -v
@@ -57,7 +57,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "Running 10-prep-captureserver with inventory: $INVENTORY"
+echo "Running 30-prep-headnode with inventory: $INVENTORY"
 
 cd "$ANSIBLE_DIR"
-ansible-playbook $VERBOSE -i "$INVENTORY" 10-prep-captureserver.yml
+ansible-playbook $VERBOSE -i "$INVENTORY" 30-prep-headnode.yml

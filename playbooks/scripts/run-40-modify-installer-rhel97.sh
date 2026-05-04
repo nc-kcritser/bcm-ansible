@@ -12,37 +12,24 @@ usage() {
     cat << EOF
 Usage: $(basename "$0") [OPTIONS]
 
-Prepare a node for image capture. Can target local machine or remote host.
+Modify BCM installer for RHEL 9.7 support. Runs locally on controller node.
 
 OPTIONS:
-    --local             Use localhost inventory (default)
-    --hosts, --remote   Use remote hosts inventory
     -v, --verbose       Enable verbose output
     -h, --help          Show this help message
 
 EXAMPLES:
-    # Prepare local machine
-    $(basename "$0") --local
-
-    # Prepare remote host
-    $(basename "$0") --hosts
+    # Modify installer with default settings
+    $(basename "$0")
 
     # With verbose output
-    $(basename "$0") --remote -v
+    $(basename "$0") -v
 EOF
     exit 0
 }
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --local)
-            INVENTORY="inventory/localhost"
-            shift
-            ;;
-        --hosts|--remote)
-            INVENTORY="inventory/hosts"
-            shift
-            ;;
         -v|--verbose)
             VERBOSE="-v"
             shift
@@ -57,7 +44,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "Running 10-prep-captureserver with inventory: $INVENTORY"
+echo "Running 40-modify-installer-rhel97 (local controller node only)"
 
 cd "$ANSIBLE_DIR"
-ansible-playbook $VERBOSE -i "$INVENTORY" 10-prep-captureserver.yml
+ansible-playbook $VERBOSE -i "$INVENTORY" 40-modify-installer-rhel97.yml

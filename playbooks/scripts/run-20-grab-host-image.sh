@@ -6,29 +6,31 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ANSIBLE_DIR="$(dirname "$SCRIPT_DIR")"
 
 INVENTORY="inventory/localhost"
+IMAGE_FILENAME=""
 VERBOSE=""
 
 usage() {
     cat << EOF
 Usage: $(basename "$0") [OPTIONS]
 
-Prepare a node for image capture. Can target local machine or remote host.
+Grab/archive a system image. Can target local machine or remote host.
 
 OPTIONS:
     --local             Use localhost inventory (default)
     --hosts, --remote   Use remote hosts inventory
+    -f, --filename      Image filename (e.g., RHEL9u6.tar.gz)
     -v, --verbose       Enable verbose output
     -h, --help          Show this help message
 
 EXAMPLES:
-    # Prepare local machine
+    # Grab image from local machine with default filename
     $(basename "$0") --local
 
-    # Prepare remote host
-    $(basename "$0") --hosts
+    # Grab image from remote host with custom filename
+    $(basename "$0") --remote -f my-image.tar.gz
 
     # With verbose output
-    $(basename "$0") --remote -v
+    $(basename "$0") --local -v
 EOF
     exit 0
 }
@@ -42,6 +44,10 @@ while [[ $# -gt 0 ]]; do
         --hosts|--remote)
             INVENTORY="inventory/hosts"
             shift
+            ;;
+        -f|--filename)
+            IMAGE_FILENAME="$2"
+            shift 2
             ;;
         -v|--verbose)
             VERBOSE="-v"
@@ -57,7 +63,17 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "Running 10-prep-captureserver with inventory: $INVENTORY"
+echo "Running 20-grab-image with inventory: $INVENTORY"
 
 cd "$ANSIBLE_DIR"
-ansible-playbook $VERBOSE -i "$INVENTORY" 10-prep-captureserver.yml
+
+# Build ansible-playbook command
+ANSIBLE_CMD="ansible-playbook $VERBOSE -i $INVENTORY 20-grab-image.yml"
+
+# Add extra variables if specified
+if [[ -n "$IMAGE_FILENAME" ]]; then
+    ANSIBLE_CMD="$ANSIBLE_CMD -e image_filename=$IMAGE_FILENAME"
+fi
+
+eval "$ANSIBLE_CMD"
+

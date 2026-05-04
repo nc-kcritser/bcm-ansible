@@ -1,6 +1,6 @@
 ---
 # Select installation method: 'dvd' or 'local'
-install_medium: dvd
+install_medium: local
 
 #### DVD installation
 install_medium_dvd_path: /root/bcm-11.0-rocky9u6.iso

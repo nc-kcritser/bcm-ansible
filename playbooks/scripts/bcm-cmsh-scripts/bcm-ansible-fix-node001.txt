@@ -1,0 +1,5 @@
+device use node001
+interfaces
+use bootif
+set ip 172.16.0.101
+commit

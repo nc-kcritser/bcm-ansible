@@ -1,0 +1,69 @@
+---
+- name: Modify BCM Installer for RHEL 9.7 Support
+  hosts: localhost
+  gather_facts: no
+  vars:
+    installer_collection_path: "/root/.ansible/collections/ansible_collections/brightcomputing/installer110"
+    head_node_vars_path: "{{ installer_collection_path }}/roles/head_node/vars"
+    head_node_files_path: "{{ installer_collection_path }}/roles/head_node/files/buildmaster/selections"
+
+  tasks:
+    - name: Check if RHEL 9.7 already in support_distros
+      shell: grep -q "^  - RedHat-9.7-x86_64$" "{{ head_node_vars_path }}/main/main.yml"
+      register: distro_check
+      failed_when: false
+      changed_when: false
+
+    - name: Add RHEL 9.7 to support_distros
+      lineinfile:
+        path: "{{ head_node_vars_path }}/main/main.yml"
+        insertafter: "^  - RedHat-9.6-x86_64$"
+        line: "  - RedHat-9.7-x86_64"
+        state: present
+      register: distro_update
+      when: distro_check.rc != 0
+
+    - name: Display distro modification result
+      debug:
+        msg: "✓ RHEL 9.7 added to support_distros"
+      when: distro_update is changed
+
+    - name: Display distro already exists
+      debug:
+        msg: "ℹ RHEL 9.7 already in support_distros"
+      when: distro_check.rc == 0
+
+    - name: Copy RHEL 9.6 vars to RHEL 9.7 vars
+      copy:
+        src: "{{ head_node_vars_path }}/os_RedHat_9.6_vars.yml"
+        dest: "{{ head_node_vars_path }}/os_RedHat_9.7_vars.yml"
+        remote_src: yes
+      register: vars_copy
+
+    - name: Display vars file copy result
+      debug:
+        msg: "Created os_RedHat_9.7_vars.yml from os_RedHat_9.6_vars.yml"
+      when: vars_copy is changed
+
+    - name: Create symlink for RHEL9u7-CM
+      file:
+        src: RHEL9u6-CM
+        dest: "{{ head_node_files_path }}/RHEL9u7-CM"
+        state: link
+        force: yes
+
+    - name: Create symlink for RHEL9u7-DIST
+      file:
+        src: RHEL9u6-DIST
+        dest: "{{ head_node_files_path }}/RHEL9u7-DIST"
+        state: link
+        force: yes
+
+    - name: Display summary
+      debug:
+        msg:
+          - "RHEL 9.7 installer modifications complete!"
+          - "✓ Added RedHat-9.7-x86_64 to support_distros"
+          - "✓ Created os_RedHat_9.7_vars.yml"
+          - "✓ Created RHEL9u7-CM symlink"
+          - "✓ Created RHEL9u7-DIST symlink"
