@@ -90,31 +90,76 @@ PATHS=(
     "/cm/images/default-image/boot/vmlinuz"
 )
 
+missing_count=0
 for path in "${PATHS[@]}"; do
     if [[ -e "$path" ]]; then
         echo -e "  ${GREEN}✓${NC} $path"
     else
         echo -e "  ${RED}✗${NC} $path ${RED}(missing)${NC}"
+        ((missing_count++))
     fi
 done
 
+if [[ $missing_count -gt 0 ]]; then
+    echo -e "  ${RED}FIX: cmsh -c \"softwareimage; use default-image; createramdisk\"${NC}"
+fi
+
 echo ""
 echo -e "${BLUE}Network Connections (nmcli):${NC}"
-if timeout 5 nmcli -t -f NAME,DEVICE connection show 2>/dev/null | grep -q .; then
+if timeout 5 nmcli con show &>/dev/null; then
     echo "  Connections:"
-    timeout 5 nmcli -t -f NAME,DEVICE connection show 2>/dev/null | awk -F: '{
-        if ($1 != "" && $2 != "") {
-            printf "    %-30s → %s\n", $1, $2
+    timeout 5 nmcli con show 2>/dev/null | tail -n +2 | awk -v RED="$RED" -v NC="$NC" '{
+        name=$1
+        for(i=2; i<=NF-2; i++) name = name " " $i
+        type=$(NF-1)
+        device=$NF
+
+        if (device == "--") {
+            printf "    %-30s → %s %s(orphaned)%s\n", name, type, RED, NC
+            orphaned[name]=1
+        } else {
+            printf "    %-30s → %s → %s\n", name, type, device
+            devices[device]++
+            conn_on_dev[device] = conn_on_dev[device] name "; "
+        }
+    }
+    END {
+        orphaned_count = length(orphaned)
+        if (orphaned_count > 0) {
+            print ""
+            print "  " RED "⚠ WARNING: Found " orphaned_count " orphaned connection(s) with no device assigned" NC
+            print "    FIX: nmcli con delete <connection-name>"
+        }
+
+        has_duplicates=0
+        for (dev in devices) {
+            if (devices[dev] > 1) {
+                has_duplicates=1
+                break
+            }
+        }
+        if (has_duplicates) {
+            print ""
+            print "  " RED "⚠ WARNING: Duplicate network device connections detected:" NC
+            for (dev in devices) {
+                if (devices[dev] > 1) {
+                    print "    Device " dev " has " devices[dev] " active connections"
+                    print "      FIX: nmcli con delete <duplicate-connection-name>"
+                }
+            }
         }
     }'
 else
-    echo -e "  ${YELLOW}⚠ No connections found or nmcli unavailable${NC}"
+    echo -e "  ${YELLOW}⚠ nmcli unavailable${NC}"
 fi
 
 echo ""
 echo -e "${BLUE}Cluster Devices (cmsh):${NC}"
-if timeout 5 cmsh -c "device; list" &>/dev/null; then
-    timeout 5 cmsh -c "device; list" | sed 's/^/  /'
+if timeout 5 cmsh -c "device list -f type,hostname,mac,ip,network" &>/dev/null; then
+    timeout 5 cmsh -c "device list -f type,hostname,mac,ip,network" 2>/dev/null | sed 's/^/  /'
+    echo ""
+    echo -e "  ${RED}FIX (if IPs above are duplicated):${NC}"
+    echo "    cmsh -c \"device use <hostname>; interfaces; use bootif; set ip <correct-ip>; commit\""
 else
     echo -e "  ${YELLOW}⚠ cmsh not responding (timeout)${NC}"
 fi
@@ -124,6 +169,7 @@ echo -e "${BLUE}Time Servers Configuration:${NC}"
 timeservers=$(timeout 5 cmsh -c "partition use base; get timeservers" 2>/dev/null)
 if [[ -z "$timeservers" ]]; then
     echo -e "  ${RED}✗ No timeservers configured${NC}"
+    echo "    FIX: cmsh -c \"partition use base; set timeservers <ntphost>\""
 else
     echo -e "  ${GREEN}✓ Timeservers configured:${NC}"
     echo "$timeservers" | sed 's/^/    /'

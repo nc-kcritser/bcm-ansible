@@ -8,6 +8,27 @@
     head_node_files_path: "{{ installer_collection_path }}/roles/head_node/files/buildmaster/selections"
 
   tasks:
+    - name: Check BCM installer collection version
+      shell: grep '"version":' "{{ installer_collection_path }}/MANIFEST.json" | awk -F'"' '{print $4}'
+      register: collection_version
+      failed_when: false
+      changed_when: false
+
+    - name: Confirm collection version is supported
+      debug:
+        msg:
+          - "✓ Collection version {{ collection_version.stdout }} is supported"
+      when: collection_version.stdout == "31.1.452+git66ec186"
+
+    - name: Warn if collection version differs from tested version
+      debug:
+        msg:
+          - "⚠ WARNING: Collection version mismatch"
+          - "Current version: {{ collection_version.stdout }}"
+          - "This has only been tested with brightcomputing.installer110 31.1.452+git66ec186 as of May 5, 2026"
+          - "Later versions may not work correctly"
+      when: collection_version.stdout != "31.1.452+git66ec186"
+
     - name: Check if RHEL 9.7 already in support_distros
       shell: grep -q "^  - RedHat-9.7-x86_64$" "{{ head_node_vars_path }}/main/main.yml"
       register: distro_check
