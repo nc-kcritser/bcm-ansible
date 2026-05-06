@@ -39,7 +39,7 @@ bcm-ansible/
     │   │   └── rhel97-updatemodules.txt
     │   ├── cleanup-deployed-image-with-cuda.sh       # Strip bloat from BCM images
     │   ├── cleanup-rhel-subsciptions.sh              # Unregister RHEL subscriptions
-    │   ├── remove-cuda-default-image.sh              # Remove CUDA from default-no-cuda
+    │   ├── remove-cuda-default-image.sh              # Remove CUDA from an image.
     │   └── validate-system-health-postdeploy.sh      # Health check after install
     ├── prereqs/                                       # Dependencies
     │   ├── requirements-collections.yml              # Ansible collections
