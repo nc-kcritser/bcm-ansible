@@ -104,6 +104,32 @@
       register: selinux_status
       changed_when: false
 
+    # CM.REPO HANDLING - LOCAL METHOD ONLY (must happen before validation)
+    - name: Handle cm.repo for local installation
+      block:
+        - name: Check if cm.repo exists on head node
+          stat:
+            path: /root/cm.repo
+          register: cm_repo_check
+
+        - name: Copy cm.repo from controller if missing
+          copy:
+            src: ../files/cm.repo
+            dest: /root/cm.repo
+            owner: root
+            group: root
+            mode: '0644'
+          when: not cm_repo_check.stat.exists
+
+        - name: Set GPGcheck to 0 in cm.repo
+          lineinfile:
+            path: /root/cm.repo
+            regexp: '^gpgcheck='
+            line: 'gpgcheck=0'
+            state: present
+
+      when: install_medium == 'local'
+
     # INSTALLATION METHOD VALIDATION
     - name: Validate installation medium (DVD)
       block:
@@ -138,9 +164,16 @@
             msg: "ERROR: cm.repo not found at /root/cm.repo"
           when: not local_repo_check.stat.exists
 
+        - name: Verify cm.repo configuration
+          command: grep -E '^(baseurl|gpgcheck)' /root/cm.repo
+          register: cm_repo_config
+          changed_when: false
+
         - name: Display local repo validation result
           debug:
-            msg: "? Local repository configured and validated"
+            msg:
+              - "? Local repository configured and validated:"
+              - "{{ cm_repo_config.stdout }}"
 
       when: install_medium == 'local'
 
@@ -156,50 +189,13 @@
         line: 'SELINUX=disabled'
         state: present
 
-    # CM.REPO HANDLING - LOCAL METHOD ONLY
-    - name: Handle cm.repo for local installation
-      block:
-        - name: Check if cm.repo exists on head node
-          stat:
-            path: /root/cm.repo
-          register: cm_repo_check
-
-        - name: Copy cm.repo from controller if missing
-          copy:
-            src: files/cm.repo
-            dest: /root/cm.repo
-            owner: root
-            group: root
-            mode: '0644'
-          when: not cm_repo_check.stat.exists
-
-        - name: Set GPGcheck to 0 in cm.repo
-          lineinfile:
-            path: /root/cm.repo
-            regexp: '^gpgcheck='
-            line: 'gpgcheck=0'
-            state: present
-
-        - name: Verify cm.repo configuration
-          command: grep -E '^(baseurl|gpgcheck)' /root/cm.repo
-          register: cm_repo_config
-          changed_when: false
-
-        - name: Display cm.repo status
-          debug:
-            msg:
-              - "cm.repo configured for local installation:"
-              - "{{ cm_repo_config.stdout }}"
-
-      when: install_medium == 'local'
-
     - name: Display summary
       debug:
         msg:
           - "Head node preparation complete!"
-          - "SSH key: Added for controller"
-          - "MariaDB: Running and validated ?"
-          - "SELinux: {{ selinux_status.stdout }}"
-          - "Installation method: {{ install_medium | upper }}"
-          - "Installation medium: Validated ?"
-          - "Ready for BCM installation"
+          - "✓ SSH key: Added for controller"
+          - "✓ MariaDB: Running and validated"
+          - "✓ SELinux: {{ selinux_status.stdout }}"
+          - "✓ Installation method: {{ install_medium | upper }}"
+          - "{% if install_medium == 'dvd' %}✓ ISO file: Located at {{ install_medium_dvd_path }}{% elif install_medium == 'local' %}✓ cm.repo: Configured and validated{% endif %}"
+          - "✓ Ready for BCM installation"

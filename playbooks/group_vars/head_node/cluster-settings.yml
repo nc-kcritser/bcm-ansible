@@ -1,8 +1,10 @@
 ---
 
 # Post-install
-post_install_default_image_archive: /root/RHEL9u6.tar.gz
+post_install_default_image_archive: /root/RHEL9-compute-clone.tar.gz
 cm_create_image_extra_args: ""
+# Settign this will force the system to not use GPU Drivers in the default compute image (there will be some cuda-libs)
+# cm_create_image_extra_args: " -skip-gpu-drivers"
 
 # General cluster settings - External (DHCP)
 external_network_name: externalnet
@@ -24,10 +26,11 @@ management_interface: enp6s19
 management_ip_address: 172.16.0.1
 management_network_baseaddress: 172.16.0.0
 management_network_netmask: 255.255.252.0
+management_network_gateway: 172.16.0.1
 
-# DHCP Offset in integer ()
-management_network_network_dns_range_start_offset: 768
-management_network_network_dns_range_end_offset: 1022
+# DHCP Offset in integer (E.g. 768-1022 would be 172.16.2.128-3.127 - if using 172.16.0.0/22)
+management_network_network_dns_range_start_offset: 640
+management_network_network_dns_range_end_offset: 895
 
 # External Services (Multiples are separated by commas.)
 external_name_servers: [8.8.8.8, 8.8.4.4]
