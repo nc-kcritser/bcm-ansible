@@ -1,6 +1,7 @@
 # BCM 11.x Deployment — Controller-Based Method
 
 Deploy BCM 11.x to remote RHEL 9.x head nodes from a separate control node running Ansible.
+THis method has not been fully tested as of May 7, 2026
 
 ---
 
