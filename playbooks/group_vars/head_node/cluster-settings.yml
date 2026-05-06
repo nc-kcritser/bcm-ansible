@@ -15,7 +15,8 @@ external_network_gateway: "{{ ansible_facts[external_interface].ipv4.address }}"
 ### For Static Use
 # external_network_name: externalnet
 # external_interface: enp6s18
-# external_network_baseaddress: 172.18.10.121
+# external_ip_address: 172.18.10.123
+# external_network_baseaddress: 172.18.10.0
 # external_network_netmask: 255.255.255.0
 # external_network_gateway: 172.18.10.1
 # external_network_domain: hpc.somecustomer.com
