@@ -1,0 +1,42 @@
+# Sensitive Files
+files/cm.repo
+
+# Large Files
+*.iso
+*.tar.gz
+*.zip
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+
+# Ansible
+*.retry
+ansible-inventory.cache
+.ansible/
+
+# Vault
+.vault_pass
+.vault_password
+
+# IDE/Editor
+.vscode/
+.idea/
+*.swp
+*~
+*.swo
+.DS_Store
+Thumbs.db
+
+# Temporary Files
+*.tmp
+*.bak
+*.log
+
+CLAUDE.md
