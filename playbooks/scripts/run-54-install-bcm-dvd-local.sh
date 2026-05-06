@@ -1,20 +1,69 @@
 #!/bin/bash
-# Wrapper for 54-install-bcm-dvd.yaml
-# Overrides post_install_default_image_archive to point to /root location
-# since BCM role vars take precedence over group_vars
+
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PLAYBOOK_DIR="$(dirname "$SCRIPT_DIR")"
-INVENTORY="${PLAYBOOK_DIR}/inventory/localhost"
-IMAGE_PATH="/root/RHEL9u6.tar.gz"
+ANSIBLE_DIR="$(dirname "$SCRIPT_DIR")"
 
-echo "Running BCM DVD Installation..."
-echo "Inventory: ${INVENTORY}"
-echo "Image: ${IMAGE_PATH}"
+INVENTORY="inventory/localhost"
+IMAGE_PATH="/root/RHEL9u6.tar.gz"
+VERBOSE=""
+
+usage() {
+    cat << EOF
+Usage: $(basename "$0") [OPTIONS]
+
+Install BCM 11.x from DVD. Can target local (direct) or remote (controller) head node.
+
+OPTIONS:
+    --local             Use localhost inventory - run on this system (default, direct method)
+    --hosts, --remote   Use remote hosts inventory - run on target head node (controller method)
+    -v, --verbose       Enable verbose output
+    -h, --help          Show this help message
+
+EXAMPLES:
+    # Install on local system (direct method)
+    $(basename "$0") --local
+
+    # Install on remote head node via controller (controller method)
+    $(basename "$0") --hosts
+
+    # With verbose output
+    $(basename "$0") --remote -v
+EOF
+    exit 0
+}
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --local)
+            INVENTORY="inventory/localhost"
+            shift
+            ;;
+        --hosts|--remote)
+            INVENTORY="inventory/hosts"
+            shift
+            ;;
+        -v|--verbose)
+            VERBOSE="-v"
+            shift
+            ;;
+        -h|--help)
+            usage
+            ;;
+        *)
+            echo "Unknown option: $1"
+            usage
+            ;;
+    esac
+done
+
+echo "Running 54-install-bcm-dvd with inventory: $INVENTORY"
+echo "Image path: ${IMAGE_PATH}"
 echo ""
 
-cd "$PLAYBOOK_DIR"
-ansible-playbook 54-install-bcm-dvd.yaml \
-  -i "${INVENTORY}" \
+cd "$ANSIBLE_DIR"
+ansible-playbook $VERBOSE \
+  -i "$INVENTORY" \
   -e "post_install_default_image_archive=${IMAGE_PATH}" \
-  "$@"
+  54-install-bcm-dvd.yaml
