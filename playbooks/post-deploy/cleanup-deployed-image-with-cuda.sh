@@ -55,22 +55,23 @@ echo "Step 4: Removing other unnecessary packages..."
 dnf_remove colord\* libwacom\* ModemManager-glib bluez-libs flatpak\*
 
 echo ""
-echo "Step 5: Removing NVIDIA driver packages..."
-dnf_remove nvidia-driver nvidia-driver-cuda nvidia-driver-cuda-libs nvidia-driver-libs
+echo "Step 5: Removing NVIDIA driver packages..." 
+dnf_remove nvidia-driver nvidia-driver-cuda nvidia-fabricmanager 
+dnf_remove nvidia-driver-cuda-libs nvidia-driver-libs
 dnf_remove kmod-nvidia-open-dkms nvidia-kmod-common nvidia-modprobe nvidia-persistenced nvidia-imex
 dnf_remove libnvidia-\* nvidia-libXNVCtrl\*
 
 echo ""
-echo "Step 6: Cleaning package manager cache..."
-dnf clean all --installroot=$IMGROOT
-
-echo ""
-echo "Step 8: Removing old kernel modules..."
+echo "Step 6: Removing old kernel modules..."
 CURRENT_KERNEL=$(ls -t $IMGROOT/usr/lib/modules/ 2>/dev/null | head -1)
 if [ -n "$CURRENT_KERNEL" ]; then
     echo "[kernels] Keeping: $CURRENT_KERNEL"
     find $IMGROOT/usr/lib/modules -maxdepth 1 -type d ! -name "$CURRENT_KERNEL" ! -name "modules" -exec rm -rf {} \; 2>/dev/null || true
 fi
+
+echo ""
+echo "Step 7: Cleaning package manager cache..."
+dnf clean all --installroot=$IMGROOT
 
 echo ""
 echo "=========================================="
@@ -79,8 +80,3 @@ echo "=========================================="
 echo ""
 echo "Image size summary:"
 du -sh "$IMGROOT" 2>/dev/null || echo "Unable to calculate final size"
-echo ""
-echo "Note: Graphics libraries have been preserved."
-echo "If you need to remove additional packages, check:"
-echo "  du -sh $IMGROOT/usr/* | sort -h"
-echo "  du -sh $IMGROOT/* | sort -h"
