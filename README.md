@@ -9,9 +9,8 @@ Automated deployment of Bright Cluster Manager (BCM) 11.x on RHEL 9.x head nodes
 ```
 bcm-ansible/
 ├── README.md                                          # This file
-├── CLAUDE.md                                          # Project context for AI assistants
 ├── files/
-│   └── cm.repo                                        # BCM yum repo config (contains credentials)
+│   └── cm.repo                                        # This file needs to be placed here for local repo installs
 ├── docs/
 │   └── rhel97-guide.md                               # RHEL 9.7-specific setup and patching
 └── playbooks/
@@ -32,8 +31,8 @@ bcm-ansible/
     ├── inventory/
     │   ├── hosts                                      # Remote hosts inventory
     │   └── localhost                                  # Local execution inventory
-    ├── post-deploy/                                  # Post-installation utilities
-    │   ├── bcm-cmsh-scripts/                         # CMsh command transcripts
+    ├── post-deploy/                                   # Post-installation utilities
+    │   ├── bcm-cmsh-scripts/                          # CMsh command transcripts
     │   │   ├── bcm-ansible-fix-node001.txt
     │   │   ├── rhel97-modulecleanup.txt
     │   │   ├── rhel97-startup.txt
