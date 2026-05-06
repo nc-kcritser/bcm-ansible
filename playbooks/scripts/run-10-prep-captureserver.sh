@@ -60,4 +60,4 @@ done
 echo "Running 10-prep-captureserver with inventory: $INVENTORY"
 
 cd "$ANSIBLE_DIR"
-ansible-playbook $VERBOSE -i "$INVENTORY" playbooks/10-prep-captureserver.yml
+ansible-playbook $VERBOSE -i "$INVENTORY" 10-prep-captureserver.yml

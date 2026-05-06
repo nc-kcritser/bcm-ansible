@@ -1,0 +1,6 @@
+softwareimage
+use default-image
+kernelmodules
+add mpi3mr
+add bonding
+commit 

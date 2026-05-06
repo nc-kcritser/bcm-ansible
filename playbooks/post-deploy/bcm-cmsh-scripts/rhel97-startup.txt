@@ -1,0 +1,6 @@
+softwareimage
+use default-image
+createramdisk
+commit -w 
+
+

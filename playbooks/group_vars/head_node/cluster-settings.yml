@@ -1,7 +1,7 @@
 ---
 
 # Post-install
-post_install_default_image_archive: /root/RHEL9u6.tar.gz
+post_install_default_image_archive: /root/RHEL9-compute-clone.tar.gz
 cm_create_image_extra_args: ""
 
 # General cluster settings - External (DHCP)
