@@ -18,6 +18,29 @@
       debug:
         msg: "Preparing {{ ansible_hostname }} ({{ ansible_default_ipv4.address }})"
 
+    # The release lock is baked into the captured image, so it must be set
+    # before capture — every compute node deployed from the image inherits it.
+    - name: Verify RHEL minor release is locked (must be set before image capture)
+      block:
+        - name: Get subscription-manager release lock
+          command: subscription-manager release --show
+          register: release_lock
+          changed_when: false
+          failed_when: false
+
+        - name: Fail if release is not locked to a supported version
+          assert:
+            that:
+              - release_lock.rc == 0
+              - release_lock.stdout is regex('Release: 9\.[67]')
+            fail_msg:
+              - "RHEL minor release is not locked to a supported version (9.6 or 9.7)."
+              - "Current state: {{ release_lock.stdout | default('', true) }}{{ release_lock.stderr | default('', true) }}"
+              - "The BCM installer performs a full system update, which would pull an unlocked system to the latest release (9.8+, unsupported as of 18 July 2026)."
+              - "Fix on the target, then re-run: subscription-manager release --set=9.6 (or 9.7) && dnf clean all"
+            success_msg: "✓ RHEL release lock verified: {{ release_lock.stdout }}"
+      when: ansible_distribution == 'RedHat'
+
     - name: Ensure /root/.ssh directory exists
       file:
         path: /root/.ssh

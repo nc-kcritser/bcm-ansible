@@ -1,0 +1,5 @@
+# Files tracked in git but excluded from release bundles
+# (git archive, GitHub "Download ZIP", release tarballs)
+CLAUDE.md export-ignore
+.gitignore export-ignore
+.gitattributes export-ignore

@@ -1,0 +1,14 @@
+---
+# BCM product key and license identity.
+# Intentionally kept in plaintext so the license configuration is readable
+# and diffable. Service passwords live in cluster-credentials.yml (vaulted).
+product_key: 158246-841820-109190-867936-127764
+license:
+  country: US
+  state: Colorado
+  locality: Denver
+  organization: Dell Technologies
+  organizational_unit: DellHPC
+  cluster_name: JASH-Cluster
+  # Auto-populated from the head node's default interface — do not set manually.
+  mac: "{{ ansible_default_ipv4.macaddress }}"
