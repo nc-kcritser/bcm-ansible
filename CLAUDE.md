@@ -67,6 +67,8 @@ The `brightcomputing.installer110` collection does not ship with RHEL 9.7 suppor
 
 **Playbook 40 patches the installed collection in-place to add RHEL 9.7 support.**
 
+As of 18 July 2026, supported targets are RHEL 9.6 and 9.7 only (9.7 via the playbook 40 patch). The RHEL minor release must be locked with `subscription-manager release --set=<9.6|9.7>` **before playbook 10** on the image-capture target (the lock is baked into the base image used for compute nodes) and **before playbooks 54/55** on the head node — the BCM installer role runs a full system update that would otherwise pull the OS to the latest minor release (9.8+).
+
 See `docs/rhel97-guide.md` for full details on:
 - What the patch does (adds RHEL 9.7 to supported distros, copies vars, creates symlinks)
 - When to run it (before RHEL 9.7 BCM install, and again after any collection upgrade)
@@ -97,8 +99,8 @@ Variables flow: playbook defaults → group vars → host vars.
 ### Hardcoded Values
 - `playbooks/10-prep-captureserver.yml` hardcodes `mysql_root_password: "Dellsvcs1"` in its vars block. Should reference `mysql_login_password` from `cluster-credentials.yml` instead.
 
-### Vault Support Commented Out
-- `playbooks/ansible.cfg` has vault support commented out (`#vault_password_file = .vault_pass`). Teams that encrypt the credentials file should uncomment this line and configure a vault password file.
+### Vault Password Handling
+- `playbooks/ansible.cfg` sets `vault_password_file = ./scripts/vault-pass-prompt.sh`. That script supplies the vault password from `$ANSIBLE_VAULT_PASSWORD` if set, otherwise it prompts interactively on the terminal. No vault password is ever stored in the repository.
 
 ---
 

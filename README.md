@@ -11,7 +11,8 @@ bcm-ansible/
 ├── README.md                                          # This file
 ├── CLAUDE.md                                          # Project context for AI assistants
 ├── files/
-│   └── cm.repo                                        # BCM yum repo config (contains credentials)
+│   ├── CM.REPO-goes-here                              # Placeholder — put your downloaded cm.repo here
+│   └── cm.repo                                        # BCM yum repo config (credentials; NOT tracked in git)
 ├── docs/
 │   └── rhel97-guide.md                               # RHEL 9.7-specific setup and patching
 └── playbooks/
@@ -64,6 +65,28 @@ bcm-ansible/
 - **OS:** Rocky Linux 9.x or RHEL 9.x
 - **Access:** Root or passwordless sudo
 - **Network:** Internet access to download packages and collections
+
+### Lock the RHEL Minor Release (Capture Target and Head Node)
+
+**⚠️ IMPORTANT:** As of **18 July 2026**, this automation supports RHEL **9.6** and **9.7** only — 9.7 requires the playbook 40 patch (see [RHEL 9.7 Guide](docs/rhel97-guide.md)). The `brightcomputing.installer110` head_node role performs a full system update during installation, and an unlocked RHEL system will be pulled up to the latest minor release (currently **9.8**) — leaving you on an unsupported OS mid-install.
+
+Lock the release on **both** systems, at these points in the workflow:
+
+1. **Image-capture target — before playbook 10 (Step 2).** The lock is captured into the base image archive, which becomes the compute/default node image. If the capture target is unlocked, every compute node deployed from that image will update itself to an unsupported release.
+2. **Head node — before playbooks 54/55 (Step 6).** The BCM installer's system update would otherwise pull the head node up to 9.8.
+
+```bash
+subscription-manager release --set=9.7   # or 9.6, to match your deployment
+dnf clean all
+```
+
+Verify with:
+
+```bash
+subscription-manager release --show
+```
+
+Playbooks 10 and 30 verify this lock on RHEL targets and **fail immediately** if the release is not set to 9.6 or 9.7, so an unlocked system is caught before image capture or BCM install begins.
 
 ### Versions
 - **Ansible Core:** >= 2.15.0
@@ -275,14 +298,20 @@ Contains BCM license key, organization identity, and service account passwords.
 | `db_cmd_password`, `slurm_user_pass`, `ldap_root_pass`, `ldap_readonly_pass` | BCM service account passwords. Change all from defaults before production deployment. |
 | `mysql_login_user`, `mysql_login_password` | MariaDB root credentials. Must match what playbook 30 sets. If changed here after prep, re-run playbook 30. |
 
-**⚠️ SECURITY:** This file contains real passwords and license keys. Never commit it unencrypted to a public repository. Use `ansible-vault`:
+**⚠️ SECURITY:** This file contains real passwords and license keys. Never commit it unencrypted to a public repository. Use `ansible-vault` (run from the `playbooks/` directory so `ansible.cfg` is picked up):
 
 ```bash
-ansible-vault encrypt playbooks/group_vars/head_node/cluster-credentials.yml
-ansible-vault edit playbooks/group_vars/head_node/cluster-credentials.yml
+cd playbooks
+ansible-vault encrypt group_vars/head_node/cluster-credentials.yml
+ansible-vault edit group_vars/head_node/cluster-credentials.yml
 ```
 
-Optionally uncomment `vault_password_file` in `playbooks/ansible.cfg` to automate decryption during playbook runs.
+**Vault password handling:** `playbooks/ansible.cfg` points `vault_password_file` at `scripts/vault-pass-prompt.sh`. Every `ansible-playbook` and `ansible-vault` command gets the vault password from one of two sources:
+
+1. The `ANSIBLE_VAULT_PASSWORD` environment variable, if set (for CI or other non-interactive runs)
+2. An interactive terminal prompt (`Ansible Vault password:`) — input is hidden and never logged
+
+No password file is stored on disk. Never commit the vault password itself.
 
 ---
 
@@ -305,7 +334,8 @@ Follow these steps in order to deploy BCM on a RHEL 9.x head node.
 **Playbook:** `playbooks/10-prep-captureserver.yml`  
 **When:** To build a fresh compute node base image.  
 **What:** Injects SSH public key, installs EPEL + Python pip modules, disables SELinux.  
-**Note:** If SELinux is disabled, a reboot is required.
+**Note:** If SELinux is disabled, a reboot is required.  
+**⚠️ Before this step:** Lock the RHEL minor release on the capture target (`subscription-manager release --set=9.7`, or `9.6`) — the lock is baked into the captured image and carries into every compute node deployed from it. See "Lock the RHEL Minor Release" under Prerequisites.
 
 ### Step 3: Capture Base Image
 **Script:** `playbooks/scripts/run-20-grab-host-image.sh [--local|--hosts] [-f filename]`  
@@ -407,6 +437,14 @@ The `brightcomputing.installer110` collection does not ship with RHEL 9.7 suppor
 
 ## Troubleshooting
 
+### System upgraded to RHEL 9.8 (or later) during BCM install
+The BCM installer role runs a full `dnf` update, which pulls the latest minor release unless the subscription is locked. Only 9.6 and 9.7 are supported (as of 18 July 2026). Lock the release and roll back or rebuild:
+```bash
+subscription-manager release --set=9.7
+dnf clean all
+```
+See "Lock the RHEL Minor Release" under Prerequisites.
+
 ### "Collection ansible.posix does not support Ansible version X"
 Upgrade ansible-core:
 ```bash
@@ -435,9 +473,9 @@ cmsh -c "partition use base; set timeservers <ntphost>"
 
 ## Security Notes
 
-- **`files/cm.repo`** contains BCM yum repository credentials (username and password in plaintext). Do not commit to public repositories.
+- **`files/cm.repo`** contains BCM yum repository credentials (username and password in plaintext). It is **not tracked in git** (excluded via `.gitignore`) — download your `cm.repo` from the Bright/NVIDIA customer portal and place it at `files/cm.repo`. The `files/CM.REPO-goes-here` placeholder marks the location.
 - **`cluster-credentials.yml`** contains BCM product key, license info, and passwords. Encrypt with `ansible-vault` before committing.
-- **Vault support** is available via the uncommented `vault_password_file` option in `playbooks/ansible.cfg`.
+- **Vault password** is supplied at runtime by `playbooks/scripts/vault-pass-prompt.sh` (via `$ANSIBLE_VAULT_PASSWORD` or an interactive prompt). Never commit the vault password to the repository.
 
 ---
 
