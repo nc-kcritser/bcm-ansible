@@ -2,7 +2,7 @@
 
 ## Background
 
-The `brightcomputing.installer110` Ansible collection does not include RHEL 9.7 in its list of supported operating systems as of the version this was tested with (`31.1.452+git66ec186`). 
+The `brightcomputing.installer110` Ansible collection does not include RHEL 9.7 in its list of supported operating systems as of the versions this was tested with (`31.1.452+git66ec186` and `33.0.48+git940b822`). 
 
 Playbook 40 (`40-modify-installer-rhel97.yml`) patches the locally installed collection in three ways to add RHEL 9.7 support:
 
@@ -16,10 +16,10 @@ Playbook 40 (`40-modify-installer-rhel97.yml`) patches the locally installed col
 
 ## Version Requirement
 
-**This patch has only been tested with `brightcomputing.installer110` version `31.1.452+git66ec186`** (as of 2026-05-05).
+**This patch has only been tested with `brightcomputing.installer110` versions `31.1.452+git66ec186` and `33.0.48+git940b822`** (as of 2026-07-18).
 
 Playbook 40 checks the installed collection version and:
-- Logs a success message if the version matches the tested version.
+- Logs a success message if the version matches a tested version.
 - Emits a warning if the version differs, noting that untested behavior may occur.
 
 Do not assume newer collection versions are safe without re-testing.
@@ -101,12 +101,13 @@ Additionally, if node IP configuration is needed:
 
 ### Running CMsh Scripts
 
-Pipe the script into CMsh:
+Run each script with `cmsh -f`:
 
 ```bash
-cmsh < playbooks/post-deploy/bcm-cmsh-scripts/rhel97-updatemodules.txt
-cmsh < playbooks/post-deploy/bcm-cmsh-scripts/rhel97-modulecleanup.txt
-cmsh < playbooks/post-deploy/bcm-cmsh-scripts/rhel97-startup.txt
+cd playbooks/post-deploy
+cmsh -f bcm-cmsh-scripts/rhel97-updatemodules.txt -q -x
+cmsh -f bcm-cmsh-scripts/rhel97-modulecleanup.txt -q -x
+cmsh -f bcm-cmsh-scripts/rhel97-startup.txt -q -x
 ```
 
 Or run each command interactively:

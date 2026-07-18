@@ -12,7 +12,7 @@ date: "18 July 2026"
 | Document | BCM 11.x Automated Deployment Guide |
 | Applies to | Bright Cluster Manager 11.x on RHEL 9.6 / 9.7 |
 | Automation | bcm-ansible repository, branch v2026.07-stable |
-| Tested collection | brightcomputing.installer110 31.1.452+git66ec186 |
+| Tested collection | brightcomputing.installer110 31.1.452+git66ec186 and 33.0.48+git940b822 |
 | Date | 18 July 2026 |
 
 ## Revision History
@@ -20,7 +20,7 @@ date: "18 July 2026"
 | Date | Change |
 |---|---|
 | 8 May 2026 | Completion of v1 activities |
-| 18 July 2026 | Added RHEL release-lock requirement and enforcement, Ansible Vault password prompting, cm.repo handling |
+| 18 July 2026 | Added RHEL release-lock requirement and enforcement, Ansible Vault password prompting, cm.repo handling. Second tested collection version (33.0.48+git940b822). Direct method prioritized over controller-based. |
 
 ---
 
@@ -36,6 +36,8 @@ This guide describes the automated deployment of NVIDIA Bright Cluster Manager (
 - RHEL 9.7 requires an additional patch step (playbook 40) that modifies the installed `brightcomputing.installer110` collection in place. See Section 7.
 
 The BCM installer performs a full system update during installation. An unlocked RHEL system will be pulled to the latest minor release (currently 9.8), which is unsupported. The RHEL minor release **must be locked** before deployment begins — see Section 3.3.
+
+**About RHEL 9.8:** While RHEL 9.8 may work in practice, it is not officially supported as of 18 July 2026. The release-lock checks in playbooks 10 and 30 accept only 9.6 and 9.7. Do not deploy on 9.8 for production use until it is officially supported and tested.
 
 ## 1.2 Deployment Pipeline Overview
 
@@ -56,19 +58,21 @@ Gaps in the numbering are reserved for future pipeline steps. Playbooks 54 and 5
 
 The automation supports two approaches. Both use the same playbooks; they differ only in where Ansible runs and which inventory is used.
 
-## 2.1 Controller-Based Method (Recommended)
+## 2.1 Direct Method (Recommended)
 
-Ansible runs on a separate control node (Rocky Linux 9.x or RHEL 9.x) and deploys to remote head nodes over SSH. This allows managing multiple deployments from one location.
-
-- Inventory: `playbooks/inventory/hosts`
-- Wrapper script flag: `--hosts` (or `--remote`)
-
-## 2.2 Direct Method
-
-Ansible runs directly on the target head node itself. Suitable for single-node or offline deployments.
+Ansible runs directly on the target head node itself. Suitable for single-node or offline deployments. **This is the fully tested and recommended deployment path.**
 
 - Inventory: `playbooks/inventory/localhost`
 - Wrapper script flag: `--local` (the default for most wrappers)
+
+## 2.2 Controller-Based Method (Not Yet Fully Tested)
+
+Ansible runs on a separate control node (Rocky Linux 9.x or RHEL 9.x) and deploys to remote head nodes over SSH. This allows managing multiple deployments from one location.
+
+**NOTE:** The controller-based method has not been 100% tested end-to-end. Prefer the direct method until controller-based testing is complete.
+
+- Inventory: `playbooks/inventory/hosts`
+- Wrapper script flag: `--hosts` (or `--remote`)
 
 ---
 
@@ -114,7 +118,7 @@ subscription-manager release --show
 | Ansible Core | >= 2.15.0 |
 | Python | 3.9+ |
 | ansible.netcommon | 5.3.0 |
-| brightcomputing.installer110 | 31.1.452+git66ec186 (tested) |
+| brightcomputing.installer110 | 31.1.452+git66ec186 and 33.0.48+git940b822 (tested) |
 | community.general, community.crypto, community.mysql, ansible.utils, ansible.posix | latest at install time |
 | Python packages | jmespath 0.10.0, xmltodict 0.12.0, netaddr, paramiko |
 
@@ -126,11 +130,10 @@ Dependency sources of truth: `playbooks/prereqs/requirements-collections.yml` an
 
 ## 4.1 Sensitive Files
 
-Two files contain credentials and must never be committed to version control in plaintext:
-
 | File | Contents | Handling |
 |---|---|---|
-| `playbooks/group_vars/head_node/cluster-credentials.yml` | BCM product key, license identity, service passwords | Encrypt with Ansible Vault (Section 4.2) |
+| `playbooks/group_vars/head_node/cluster-credentials.yml` | BCM service passwords only | Encrypt with Ansible Vault (Section 4.2) |
+| `playbooks/group_vars/head_node/cluster-license.yml` | BCM product key and license identity | Plaintext by design — kept readable and diffable. Not vaulted. |
 | `files/cm.repo` | Username and password for updates.brightcomputing.com | Not tracked in git; download from the Bright/NVIDIA customer portal and place at `files/cm.repo` (the `CM.REPO-goes-here` placeholder marks the location) |
 
 ## 4.2 Ansible Vault
@@ -152,12 +155,19 @@ ansible-vault edit group_vars/head_node/cluster-credentials.yml
 
 No vault password is stored on disk or in the repository. Distribute the password to team members out-of-band.
 
-## 4.4 Credential Fields Reference
+## 4.4 License and Credential Fields Reference
+
+License fields (`cluster-license.yml`, plaintext):
 
 | Field | Description |
 |---|---|
 | `product_key` | BCM 11.x product license key (from Bright Computing / NVIDIA) |
 | `license.*` | Organization identity: country, state, locality, organization, organizational unit, cluster name. The `mac` field is auto-populated from the head node's default interface — do not set manually. |
+
+Password fields (`cluster-credentials.yml`, vaulted):
+
+| Field | Description |
+|---|---|
 | `db_cmd_password`, `slurm_user_pass`, `ldap_root_pass`, `ldap_readonly_pass` | BCM service account passwords. Change all from defaults before production deployment. |
 | `mysql_login_user`, `mysql_login_password` | MariaDB root credentials. Must match what playbook 30 configures; if changed afterward, re-run playbook 30. |
 
@@ -279,7 +289,7 @@ Quiesces the filesystem and creates a compressed archive using the BCM `vm_archi
 
 ```bash
 cd playbooks/scripts
-./run-30-prep-headnode.sh --hosts          # or --local for the direct method
+./run-30-prep-headnode.sh --local          # or --hosts for the controller method
 ```
 
 Verifies the release lock, installs and initializes MariaDB, sets and validates the database root password, validates the chosen install medium (ISO present, or cm.repo present/copied), disables SELinux, and injects the controller SSH key. Reboot if SELinux was changed.
@@ -299,7 +309,7 @@ Path A — DVD ISO:
 
 ```bash
 cd playbooks/scripts
-./run-54-install-bcm-dvd-local.sh --hosts
+./run-54-install-bcm-dvd-local.sh --local   # or --hosts for the controller method
 ```
 
 Requires `install_medium: dvd` and the ISO at `install_medium_dvd_path`. The playbook mounts the ISO at `/mnt/dvd` and verifies its contents before invoking the BCM head_node role.
@@ -308,7 +318,7 @@ Path B — Local yum repository:
 
 ```bash
 cd playbooks/scripts
-./run-55-install-bcm-cmrepo-local.sh --hosts
+./run-55-install-bcm-cmrepo-local.sh --local   # or --hosts for the controller method
 ```
 
 Requires `install_medium: local` and `cm.repo` at `/root/cm.repo` on the head node (copied automatically by playbook 30 if missing).
@@ -325,7 +335,7 @@ The tested version of the `brightcomputing.installer110` collection does not inc
 2. Copies `os_RedHat_9.6_vars.yml` to `os_RedHat_9.7_vars.yml` (RHEL 9.7 uses the same package layout as 9.6).
 3. Creates selection symlinks `RHEL9u7-CM` and `RHEL9u7-DIST` pointing to their 9.6 counterparts.
 
-The patch is idempotent. It is verified against collection version 31.1.452+git66ec186 only; the playbook warns if a different version is installed. To revert, force-reinstall the collection:
+The patch is idempotent. It is verified against collection versions 31.1.452+git66ec186 and 33.0.48+git940b822 only; the playbook warns if a different version is installed. To revert, force-reinstall the collection:
 
 ```bash
 ansible-galaxy collection install brightcomputing.installer110 --force
@@ -345,9 +355,10 @@ After BCM installation completes on RHEL 9.7, run these CMsh scripts in order fr
 Execution:
 
 ```bash
-cmsh < playbooks/post-deploy/bcm-cmsh-scripts/rhel97-updatemodules.txt
-cmsh < playbooks/post-deploy/bcm-cmsh-scripts/rhel97-modulecleanup.txt
-cmsh < playbooks/post-deploy/bcm-cmsh-scripts/rhel97-startup.txt
+cd playbooks/post-deploy
+cmsh -f bcm-cmsh-scripts/rhel97-updatemodules.txt -q -x
+cmsh -f bcm-cmsh-scripts/rhel97-modulecleanup.txt -q -x
+cmsh -f bcm-cmsh-scripts/rhel97-startup.txt -q -x
 ```
 
 ---
@@ -381,6 +392,7 @@ Checks BCM service states (tftpd, cmd, dhcpd, mariadb), disk usage thresholds, d
 | Playbook 10 or 30 fails: "RHEL minor release is not locked" | Run `subscription-manager release --set=9.6` (or `9.7`) followed by `dnf clean all` on the target, then re-run. |
 | System upgraded to RHEL 9.8 during install | The release was not locked before install. Lock the release, then roll back or rebuild the system. |
 | Vault password errors / "vault password script returned non-zero" | No terminal was available to prompt. Set `ANSIBLE_VAULT_PASSWORD` for non-interactive runs. |
+| Need to edit or view the encrypted credentials file | From the `playbooks/` directory: `ansible-vault edit group_vars/head_node/cluster-credentials.yml` (decrypts to a temp file, opens `$EDITOR`, re-encrypts on save). Use `ansible-vault view` to read without editing. The vault password is prompted for automatically. |
 | "Collection ansible.posix does not support Ansible version X" | Upgrade: `pip install --upgrade "ansible-core>=2.15.0"`. |
 | MariaDB root password already set | Safe to re-run playbook 30; the password task tolerates an existing password. |
 | SELinux still enabled after prep | Reboot the target; the persistent change requires it. |
@@ -407,7 +419,7 @@ bcm-ansible/
   playbooks/
     ansible.cfg                      Ansible configuration (vault prompt wired in)
     10..55 playbooks                 Deployment pipeline
-    group_vars/head_node/            Cluster settings, install method, credentials
+    group_vars/head_node/            Cluster settings, install method, license (plaintext), credentials (vaulted)
     host_vars/                       Per-host overrides
     inventory/                       hosts (remote) and localhost inventories
     post-deploy/                     Validation, cleanup, and CMsh scripts

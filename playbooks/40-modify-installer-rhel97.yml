@@ -6,6 +6,9 @@
     installer_collection_path: "/root/.ansible/collections/ansible_collections/brightcomputing/installer110"
     head_node_vars_path: "{{ installer_collection_path }}/roles/head_node/vars"
     head_node_files_path: "{{ installer_collection_path }}/roles/head_node/files/buildmaster/selections"
+    tested_collection_versions:
+      - "31.1.452+git66ec186"
+      - "33.0.48+git940b822"
 
   tasks:
     - name: Check BCM installer collection version
@@ -18,16 +21,16 @@
       debug:
         msg:
           - "✓ Collection version {{ collection_version.stdout }} is supported"
-      when: collection_version.stdout == "31.1.452+git66ec186"
+      when: collection_version.stdout in tested_collection_versions
 
-    - name: Warn if collection version differs from tested version
+    - name: Warn if collection version differs from tested versions
       debug:
         msg:
           - "⚠ WARNING: Collection version mismatch"
           - "Current version: {{ collection_version.stdout }}"
-          - "This has only been tested with brightcomputing.installer110 31.1.452+git66ec186 as of May 5, 2026"
-          - "Later versions may not work correctly"
-      when: collection_version.stdout != "31.1.452+git66ec186"
+          - "This has only been tested with brightcomputing.installer110 {{ tested_collection_versions | join(' and ') }} as of 18 July 2026"
+          - "Other versions may not work correctly"
+      when: collection_version.stdout not in tested_collection_versions
 
     - name: Check if RHEL 9.7 already in support_distros
       shell: grep -q "^  - RedHat-9.7-x86_64$" "{{ head_node_vars_path }}/main/main.yml"

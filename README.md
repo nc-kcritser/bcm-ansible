@@ -24,7 +24,8 @@ bcm-ansible/
     ├── 54-install-bcm-dvd.yaml                       # Install BCM from ISO
     ├── 55-install-bcm-cmrepo-local.yaml              # Install BCM from local yum repo
     ├── group_vars/head_node/
-    │   ├── cluster-credentials.yml                   # BCM license, passwords (SENSITIVE)
+    │   ├── cluster-credentials.yml                   # Service passwords (VAULTED)
+    │   ├── cluster-license.yml                       # BCM product key + license identity (plaintext)
     │   ├── cluster-install-method.yml                # Install method toggle (dvd/local)
     │   └── cluster-settings.yml                      # Network, timezone, image paths
     ├── host_vars/
@@ -88,6 +89,8 @@ subscription-manager release --show
 
 Playbooks 10 and 30 verify this lock on RHEL targets and **fail immediately** if the release is not set to 9.6 or 9.7, so an unlocked system is caught before image capture or BCM install begins.
 
+**About RHEL 9.8:** While RHEL 9.8 may work in practice, it is **not officially supported** as of 18 July 2026. The release-lock checks in playbooks 10 and 30 only accept 9.6 and 9.7. Do not deploy on 9.8 for production use until it is officially supported and tested.
+
 ### Versions
 - **Ansible Core:** >= 2.15.0
 - **Python:** 3.9+
@@ -112,8 +115,19 @@ Playbooks 10 and 30 verify this lock on RHEL targets and **fail immediately** if
 
 This repo supports two deployment approaches:
 
-### Method 1: Controller-Based Deployment (Recommended)
+### Method 1: Direct Deployment (Recommended)
+Run Ansible directly on the target head node (uses `localhost` inventory). This is the fully tested and recommended deployment path.
+
+**Prerequisites:**
+- RHEL 9.x head node with network access (to download packages/collections)
+- Root access on the head node itself
+
+**Setup:** Step 1 runs on the head node. Steps 2–6 run locally using `inventory/localhost`.
+
+### Method 2: Controller-Based Deployment (Not Yet Fully Tested)
 Run Ansible from a separate control node against the target head node(s). Allows managing multiple deployments from one location.
+
+**⚠️ NOTE:** The controller-based method has not been 100% tested end-to-end. Prefer the direct method until controller-based testing is complete.
 
 **Prerequisites:**
 - Separate control node (Rocky/RHEL 9.x)
@@ -122,57 +136,19 @@ Run Ansible from a separate control node against the target head node(s). Allows
 
 **Setup:** Steps 0–1 run once on the control node. Steps 2–6 run against target head nodes.
 
-### Method 2: Direct Deployment
-Run Ansible directly on the target head node (uses `localhost` inventory). Useful for single-node setups or offline deployments.
-
-**Prerequisites:**
-- RHEL 9.x head node with network access (to download packages/collections)
-- Root access on the head node itself
-
-**Setup:** Step 1 runs on the head node. Steps 2–6 run locally using `inventory/localhost`.
-
 ---
 
 ## Initial Setup
 
 The setup steps differ slightly depending on your deployment method.
 
-### Controller-Based Method
-
-#### Step 0: Generate SSH Key (one-time on control node)
-
-```bash
-playbooks/scripts/00-ssh-keygen-controllernode.sh
-```
-
-Generates `~/.ssh/id_ed25519` (ed25519 key, no passphrase). Required so the controller can SSH into target head nodes.
-
-#### Step 1: Set Up Control Node (one-time)
-
-```bash
-cd playbooks/scripts
-./01-controller-setup.sh
-```
-
-Installs EPEL, Ansible collections, and Python packages from `../prereqs/`. The script must be run from `playbooks/scripts/` so relative paths resolve correctly.
-
-After setup, verify installation:
-
-```bash
-ansible --version
-ansible-galaxy collection list
-pip3 list | grep -E 'jmespath|xmltodict|netaddr'
-```
-
----
-
-### Direct Method
+### Direct Method (Recommended)
 
 #### Step 1: Set Up Head Node (one-time on target RHEL 9.x system)
 
 ```bash
 cd /path/to/bcm-ansible/playbooks/scripts
-./01-controller-setup.sh
+./run-01-controller-setup.sh
 ```
 
 Installs EPEL, Ansible collections, and Python packages. The script must be run from `playbooks/scripts/` directory so relative paths resolve correctly.
@@ -189,11 +165,54 @@ Then proceed to Step 2 (Prepare Image Capture Target) in the workflow below, usi
 
 ---
 
+### Controller-Based Method (Not Yet Fully Tested)
+
+#### Step 0: Generate SSH Key (one-time on control node)
+
+```bash
+playbooks/scripts/00-ssh-keygen-controllernode.sh
+```
+
+Generates `~/.ssh/id_ed25519` (ed25519 key, no passphrase). Required so the controller can SSH into target head nodes.
+
+#### Step 1: Set Up Control Node (one-time)
+
+```bash
+cd playbooks/scripts
+./run-01-controller-setup.sh
+```
+
+Installs EPEL, Ansible collections, and Python packages from `../prereqs/`. The script must be run from `playbooks/scripts/` so relative paths resolve correctly.
+
+After setup, verify installation:
+
+```bash
+ansible --version
+ansible-galaxy collection list
+pip3 list | grep -E 'jmespath|xmltodict|netaddr'
+```
+
+---
+
 ## Setting Up a New Head Node
 
 To deploy to a new head node (e.g., `tornado`), follow this checklist:
 
-### Controller-Based Deployment
+### Direct Deployment (Recommended)
+
+1. **On tornado** (the target head node), clone this repo or copy the `playbooks/` directory.
+
+2. **Run Step 1** (control node setup) on tornado.
+
+3. **Adjust cluster settings** in `playbooks/group_vars/head_node/`:
+   - `cluster-settings.yml` — Network configuration for tornado
+   - `cluster-install-method.yml` — Install method
+   - `cluster-license.yml` — BCM product key and license identity
+   - `cluster-credentials.yml` — Service passwords (vaulted)
+
+4. **Run the workflow** (Steps 2–6 below) using `inventory/localhost`.
+
+### Controller-Based Deployment (Not Yet Fully Tested)
 
 1. **Create host variables** for the new head node:
    ```bash
@@ -219,22 +238,10 @@ To deploy to a new head node (e.g., `tornado`), follow this checklist:
 4. **Adjust cluster settings** in `playbooks/group_vars/head_node/`:
    - `cluster-settings.yml` — Network interfaces, IPs, gateway, timezone for tornado
    - `cluster-install-method.yml` — Choose `dvd` or `local` install method
-   - `cluster-credentials.yml` — BCM license key and passwords (optional if same as before)
+   - `cluster-license.yml` — BCM product key and license identity
+   - `cluster-credentials.yml` — Service passwords, vaulted (optional if same as before)
 
 5. **Run the workflow** (Steps 2–6 of the end-to-end section below), targeting tornado.
-
-### Direct Deployment
-
-1. **On tornado** (the target head node), clone this repo or copy the `playbooks/` directory.
-
-2. **Run Step 1** (control node setup) on tornado.
-
-3. **Adjust cluster settings** in `playbooks/group_vars/head_node/`:
-   - `cluster-settings.yml` — Network configuration for tornado
-   - `cluster-install-method.yml` — Install method
-   - `cluster-credentials.yml` — License and passwords
-
-4. **Run the workflow** (Steps 2–6 below) using `inventory/localhost`.
 
 ---
 
@@ -287,18 +294,25 @@ Controls which BCM installation method to use and the required paths:
 
 Note: Playbook 30 (`prep-headnode`) also branches on this variable to validate the chosen method's requirements.
 
-### cluster-credentials.yml
+### cluster-license.yml (plaintext, by design)
 
-Contains BCM license key, organization identity, and service account passwords.
+Contains the BCM product key and license identity. Kept unencrypted so the license configuration stays readable and diffable.
 
 | Field | Description |
 |---|---|
 | `product_key` | BCM 11.x product license key. Provided by Bright Computing / NVIDIA. |
 | `license.*` | Organization fields: country, state, locality, organization, organizational_unit, cluster_name. The `mac` field is auto-populated from `ansible_default_ipv4.macaddress` — do not set manually. |
+
+### cluster-credentials.yml (vaulted)
+
+Contains only the BCM service account passwords.
+
+| Field | Description |
+|---|---|
 | `db_cmd_password`, `slurm_user_pass`, `ldap_root_pass`, `ldap_readonly_pass` | BCM service account passwords. Change all from defaults before production deployment. |
 | `mysql_login_user`, `mysql_login_password` | MariaDB root credentials. Must match what playbook 30 sets. If changed here after prep, re-run playbook 30. |
 
-**⚠️ SECURITY:** This file contains real passwords and license keys. Never commit it unencrypted to a public repository. Use `ansible-vault` (run from the `playbooks/` directory so `ansible.cfg` is picked up):
+**⚠️ SECURITY:** This file contains real passwords. Never commit it unencrypted to a public repository. Use `ansible-vault` (run from the `playbooks/` directory so `ansible.cfg` is picked up):
 
 ```bash
 cd playbooks
@@ -361,7 +375,7 @@ Follow these steps in order to deploy BCM on a RHEL 9.x head node.
 **Playbook:** `playbooks/40-modify-installer-rhel97.yml`  
 **When:** Required for RHEL 9.7 deployments. Can be skipped for RHEL 9.6 and earlier.  
 **What:** Patches the locally installed `brightcomputing.installer110` collection to add RHEL 9.7 support.  
-**Warning:** Only tested with collection version `31.1.452+git66ec186`. See [RHEL 9.7 Guide](docs/rhel97-guide.md) for details.  
+**Warning:** Only tested with collection versions `31.1.452+git66ec186` and `33.0.48+git940b822`. See [RHEL 9.7 Guide](docs/rhel97-guide.md) for details.  
 **Note:** Must be re-applied after any collection upgrade.
 
 ### Step 6: Install BCM (choose one path)
@@ -405,7 +419,7 @@ Checks:
 Interactive CMsh command transcripts in `playbooks/post-deploy/bcm-cmsh-scripts/`. Run via:
 
 ```bash
-cmsh < scriptname.txt
+cmsh -f scriptname.txt -q -x
 ```
 
 Or copy/paste commands interactively.
@@ -436,6 +450,17 @@ The `brightcomputing.installer110` collection does not ship with RHEL 9.7 suppor
 ---
 
 ## Troubleshooting
+
+### How to edit the encrypted credentials file
+Run from the `playbooks/` directory so `ansible.cfg` supplies the vault password (you'll be prompted, or set `ANSIBLE_VAULT_PASSWORD`):
+```bash
+cd playbooks
+ansible-vault edit group_vars/head_node/cluster-credentials.yml
+```
+This decrypts to a temporary file, opens your `$EDITOR` (vi by default), and re-encrypts on save. To just look without editing:
+```bash
+ansible-vault view group_vars/head_node/cluster-credentials.yml
+```
 
 ### System upgraded to RHEL 9.8 (or later) during BCM install
 The BCM installer role runs a full `dnf` update, which pulls the latest minor release unless the subscription is locked. Only 9.6 and 9.7 are supported (as of 18 July 2026). Lock the release and roll back or rebuild:
@@ -474,7 +499,8 @@ cmsh -c "partition use base; set timeservers <ntphost>"
 ## Security Notes
 
 - **`files/cm.repo`** contains BCM yum repository credentials (username and password in plaintext). It is **not tracked in git** (excluded via `.gitignore`) — download your `cm.repo` from the Bright/NVIDIA customer portal and place it at `files/cm.repo`. The `files/CM.REPO-goes-here` placeholder marks the location.
-- **`cluster-credentials.yml`** contains BCM product key, license info, and passwords. Encrypt with `ansible-vault` before committing.
+- **`cluster-credentials.yml`** contains BCM service passwords only. Encrypt with `ansible-vault` before committing.
+- **`cluster-license.yml`** contains the BCM product key and license identity in plaintext, by design (readable and diffable). Treat repository access accordingly.
 - **Vault password** is supplied at runtime by `playbooks/scripts/vault-pass-prompt.sh` (via `$ANSIBLE_VAULT_PASSWORD` or an interactive prompt). Never commit the vault password to the repository.
 
 ---

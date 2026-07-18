@@ -28,7 +28,8 @@ Playbook 40 is a **destructive in-place patch** to the installed `brightcomputin
 
 These files contain credentials, license keys, or other sensitive data:
 
-- **`playbooks/group_vars/head_node/cluster-credentials.yml`** — BCM product key, license info, database and system passwords. All values should be changed from defaults before any production deployment.
+- **`playbooks/group_vars/head_node/cluster-credentials.yml`** — BCM database and system service passwords (vaulted). All values should be changed from defaults before any production deployment.
+- **`playbooks/group_vars/head_node/cluster-license.yml`** — BCM product key and license identity. Deliberately plaintext so it stays readable and diffable; do not vault it.
 - **`files/cm.repo`** — Contains username and password for `updates.brightcomputing.com` (BCM yum repository credentials, plaintext).
 
 In documentation, comments, or examples, refer to these files by name and note that they contain sensitive data, but never expose actual values in code, logs, or version control.
@@ -63,11 +64,11 @@ The `playbooks/scripts/01-controller-setup.sh` script installs both. It must be 
 
 ## RHEL 9.7 Support
 
-The `brightcomputing.installer110` collection does not ship with RHEL 9.7 support out-of-the-box (as of the version tested: `31.1.452+git66ec186`).
+The `brightcomputing.installer110` collection does not ship with RHEL 9.7 support out-of-the-box (as of the versions tested: `31.1.452+git66ec186` and `33.0.48+git940b822`).
 
 **Playbook 40 patches the installed collection in-place to add RHEL 9.7 support.**
 
-As of 18 July 2026, supported targets are RHEL 9.6 and 9.7 only (9.7 via the playbook 40 patch). The RHEL minor release must be locked with `subscription-manager release --set=<9.6|9.7>` **before playbook 10** on the image-capture target (the lock is baked into the base image used for compute nodes) and **before playbooks 54/55** on the head node — the BCM installer role runs a full system update that would otherwise pull the OS to the latest minor release (9.8+).
+As of 18 July 2026, supported targets are RHEL 9.6 and 9.7 only (9.7 via the playbook 40 patch). RHEL 9.8 may work in practice but is not officially supported; the release-lock checks in playbooks 10 and 30 only accept 9.6/9.7. The RHEL minor release must be locked with `subscription-manager release --set=<9.6|9.7>` **before playbook 10** on the image-capture target (the lock is baked into the base image used for compute nodes) and **before playbooks 54/55** on the head node — the BCM installer role runs a full system update that would otherwise pull the OS to the latest minor release (9.8+).
 
 See `docs/rhel97-guide.md` for full details on:
 - What the patch does (adds RHEL 9.7 to supported distros, copies vars, creates symlinks)
@@ -133,7 +134,8 @@ Local control node execution. Used by:
 
 - No automated tests exist yet (unit, integration, or end-to-end).
 - Manual validation post-deploy uses `playbooks/post-deploy/validate-system-health-postdeploy.sh` to check BCM service state, disk usage, network connectivity, cmsh access, and timeserver configuration.
-- RHEL 9.7 support has been tested with `brightcomputing.installer110==31.1.452+git66ec186` only.
+- RHEL 9.7 support has been tested with `brightcomputing.installer110` versions `31.1.452+git66ec186` and `33.0.48+git940b822` only.
+- The direct deployment method is the fully tested path; the controller-based method is not yet 100% tested end-to-end.
 
 ---
 

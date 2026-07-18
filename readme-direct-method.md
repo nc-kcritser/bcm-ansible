@@ -236,9 +236,10 @@ Checks: BCM services, disk usage, network connectivity, cmsh access, timeserver 
 If deployed on RHEL 9.7, run these CMsh scripts in order:
 
 ```bash
-cmsh < playbooks/post-deploy/bcm-cmsh-scripts/rhel97-updatemodules.txt
-cmsh < playbooks/post-deploy/bcm-cmsh-scripts/rhel97-modulecleanup.txt
-cmsh < playbooks/post-deploy/bcm-cmsh-scripts/rhel97-startup.txt
+cd playbooks/post-deploy
+cmsh -f bcm-cmsh-scripts/rhel97-updatemodules.txt -q -x
+cmsh -f bcm-cmsh-scripts/rhel97-modulecleanup.txt -q -x
+cmsh -f bcm-cmsh-scripts/rhel97-startup.txt -q -x
 ```
 
 See [RHEL 9.7 Guide](docs/rhel97-guide.md) for details.

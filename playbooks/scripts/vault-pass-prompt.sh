@@ -14,9 +14,11 @@ if [[ -n "${ANSIBLE_VAULT_PASSWORD:-}" ]]; then
     exit 0
 fi
 
-if [[ -e /dev/tty ]]; then
+# -e /dev/tty is not enough: the node exists even when there is no
+# controlling terminal, so test that it can actually be opened.
+if ( : < /dev/tty ) 2>/dev/null; then
     read -rs -p "Ansible Vault password: " vault_pass < /dev/tty
-    echo >/dev/tty
+    echo >&2
     printf '%s' "${vault_pass}"
     exit 0
 fi
