@@ -101,7 +101,7 @@ Variables flow: playbook defaults → group vars → host vars.
 - `playbooks/10-prep-captureserver.yml` hardcodes `mysql_root_password: "Dellsvcs1"` in its vars block. Should reference `mysql_login_password` from `cluster-credentials.yml` instead.
 
 ### Vault Password Handling
-- `playbooks/ansible.cfg` sets `vault_password_file = ./scripts/vault-pass-prompt.sh`. That script supplies the vault password from `$ANSIBLE_VAULT_PASSWORD` if set, otherwise it prompts interactively on the terminal. No vault password is ever stored in the repository.
+- `playbooks/ansible.cfg` sets `vault_password_file = ./scripts/vault-pass-prompt.sh`. That script supplies the vault password from, in order: `$ANSIBLE_VAULT_PASSWORD`; `playbooks/.vault_pass` (a persisted, gitignored, mode-600 file set up once via `scripts/setup-vault-password.sh`); or an interactive terminal prompt. The persisted file exists because the deployment sequence reboots the head node after playbooks 10 and 30, which would otherwise wipe out any exported shell variable. `.vault_pass` itself is never committed to the repository.
 
 ---
 

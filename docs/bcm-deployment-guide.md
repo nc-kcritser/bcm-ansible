@@ -119,7 +119,7 @@ subscription-manager release --show
 | Python | 3.9+ |
 | ansible.netcommon | 5.3.0 |
 | brightcomputing.installer110 | 31.1.452+git66ec186 and 33.0.48+git940b822 (tested) |
-| community.general, community.crypto, community.mysql, ansible.utils, ansible.posix | latest at install time |
+| community.general, community.crypto, community.mysql, ansible.mysql, ansible.utils, ansible.posix | latest at install time |
 | Python packages | jmespath 0.10.0, xmltodict 0.12.0, netaddr, paramiko |
 
 Dependency sources of truth: `playbooks/prereqs/requirements-collections.yml` and `playbooks/prereqs/requirements-pip.txt`.

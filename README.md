@@ -100,6 +100,7 @@ Playbooks 10 and 30 verify this lock on RHEL targets and **fail immediately** if
   - `community.general`
   - `community.crypto`
   - `community.mysql`
+  - `ansible.mysql`
   - `ansible.utils`
   - `ansible.posix`
 - **Python Packages:** See `playbooks/prereqs/requirements-pip.txt`
@@ -320,12 +321,13 @@ ansible-vault encrypt group_vars/head_node/cluster-credentials.yml
 ansible-vault edit group_vars/head_node/cluster-credentials.yml
 ```
 
-**Vault password handling:** `playbooks/ansible.cfg` points `vault_password_file` at `scripts/vault-pass-prompt.sh`. Every `ansible-playbook` and `ansible-vault` command gets the vault password from one of two sources:
+**Vault password handling:** `playbooks/ansible.cfg` points `vault_password_file` at `scripts/vault-pass-prompt.sh`. Every `ansible-playbook` and `ansible-vault` command gets the vault password from one of three sources, in order:
 
 1. The `ANSIBLE_VAULT_PASSWORD` environment variable, if set (for CI or other non-interactive runs)
-2. An interactive terminal prompt (`Ansible Vault password:`) — input is hidden and never logged
+2. `playbooks/.vault_pass`, if present — a persisted password file (mode 600, gitignored). Set it up once with `scripts/setup-vault-password.sh`, which prompts for the password, verifies it decrypts `cluster-credentials.yml`, and saves it. Because the deployment sequence reboots the head node after playbooks 10 and 30 (losing any exported shell variable), this is the recommended way to avoid re-entering the password at every step.
+3. An interactive terminal prompt (`Ansible Vault password:`) — input is hidden and never logged
 
-No password file is stored on disk. Never commit the vault password itself.
+Never commit `playbooks/.vault_pass` or the vault password itself.
 
 ---
 
