@@ -119,14 +119,16 @@ cmsh> use default-image
 cmsh> kernelmodules
 cmsh> add mpi3mr
 cmsh> add bonding
+cmsh> add 8021q
 cmsh> commit
 ```
 
 ### What Each Script Does
 
 **`rhel97-updatemodules.txt`**
-- Adds `mpi3mr` (Used for Support in PERC 965 cards)
+- Adds `mpi3mr` (used for PERC 965 card support)
 - Adds `bonding` (network bonding support)
+- Adds `8021q` (VLAN tagging / 802.1Q support)
 
 **`rhel97-modulecleanup.txt`**
 - Removes legacy/conflicting SCSI and RAID drivers (3w-9xxx, aic7xxx, arcmsr, cciss, etc.) that do not exist in RHEL 9.7.
@@ -135,7 +137,7 @@ cmsh> commit
 
 **`rhel97-startup.txt`**
 - Rebuilds the ramdisk for the `default-image` after kernel module changes
-- Uses `createramdisk` with wait flag (`commit -w`)
+- Uses `createramdisk` followed by `commit`
 
 **`bcm-ansible-fix-node001.txt`** (optional)
 - Navigates to `device > node001 > interfaces > bootif`

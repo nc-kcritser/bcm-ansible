@@ -12,9 +12,16 @@ date: "18 July 2026"
 | Document | BCM 11.x Deployment Guide — Direct Method |
 | Applies to | Bright Cluster Manager 11.x on RHEL 9.6 / 9.7 |
 | Method | Direct: Ansible runs on the target head node itself |
-| Automation | bcm-ansible repository, branch v2026.07-stable |
+| Automation | bcm-ansible repository, release v2026.8.1 |
 | Tested collection | brightcomputing.installer110 31.1.452+git66ec186 and 33.0.48+git940b822 |
-| Date | 18 July 2026 |
+| Date | 12 August 2026 |
+
+## Revision History
+
+| Date | Change |
+|---|---|
+| 18 July 2026 | Initial release. RHEL release-lock requirement and enforcement, Ansible Vault password prompting, cm.repo handling. Second tested collection version (33.0.48+git940b822). |
+| 12 August 2026 | Switched MariaDB task to `ansible.mariadb` collection (eliminates deprecation warning). Added `8021q` kernel module to RHEL 9.7 post-install steps. Removed `commit -w` from `rhel97-modulecleanup.txt`. Retired `run-54-install-bcm-dvd-local.sh` wrapper — DVD installs now use `ansible-playbook` directly. Vault password section corrected to document all three sources including the persisted `.vault_pass` file. |
 
 ---
 
@@ -87,7 +94,7 @@ subscription-manager release --show
 | Python | 3.9+ |
 | ansible.netcommon | 5.3.0 |
 | brightcomputing.installer110 | 31.1.452+git66ec186 and 33.0.48+git940b822 (tested) |
-| community.general, community.crypto, community.mysql, ansible.mysql, ansible.utils, ansible.posix | latest at install time |
+| community.general, community.crypto, community.mysql, ansible.mariadb, ansible.utils, ansible.posix | latest at install time |
 | Python packages | jmespath 0.10.0, xmltodict 0.12.0, netaddr, paramiko |
 
 Dependency sources of truth: `playbooks/prereqs/requirements-collections.yml` and `playbooks/prereqs/requirements-pip.txt`.
@@ -116,12 +123,13 @@ ansible-vault edit group_vars/head_node/cluster-credentials.yml
 
 ## 3.3 Vault Password Handling
 
-`playbooks/ansible.cfg` sets `vault_password_file` to `scripts/vault-pass-prompt.sh`. Every `ansible-playbook` and `ansible-vault` command obtains the vault password from one of two sources, in order:
+`playbooks/ansible.cfg` sets `vault_password_file` to `scripts/vault-pass-prompt.sh`. Every `ansible-playbook` and `ansible-vault` command obtains the vault password from one of three sources, in order:
 
 1. The `ANSIBLE_VAULT_PASSWORD` environment variable, if set (intended for CI and other non-interactive runs).
-2. An interactive terminal prompt (`Ansible Vault password:`). Input is hidden and never logged.
+2. `playbooks/.vault_pass` — a persisted, gitignored, mode-600 file created once by running `scripts/setup-vault-password.sh`. This is the recommended approach because the deployment sequence reboots the head node after playbooks 10 and 30, which would wipe any exported shell variable.
+3. An interactive terminal prompt (`Ansible Vault password:`). Input is hidden and never logged.
 
-No vault password is stored on disk or in the repository. Distribute the password to team members out-of-band.
+Never commit `playbooks/.vault_pass` or the vault password itself to the repository.
 
 ## 3.4 License and Credential Fields Reference
 
@@ -257,8 +265,8 @@ Required before any RHEL 9.7 install; skip for RHEL 9.6. Must be re-run after an
 Path A — DVD ISO:
 
 ```bash
-cd playbooks/scripts
-./run-54-install-bcm-dvd-local.sh --local
+cd playbooks
+ansible-playbook -i inventory/localhost 54-install-bcm-dvd.yaml
 ```
 
 Requires `install_medium: dvd` and the ISO at `install_medium_dvd_path`. The playbook mounts the ISO at `/mnt/dvd` and verifies its contents before invoking the BCM head_node role.
@@ -296,7 +304,7 @@ After BCM installation completes on RHEL 9.7, run these CMsh scripts in order fr
 
 | Order | Script | Purpose |
 |---|---|---|
-| 1 | rhel97-updatemodules.txt | Adds `mpi3mr` (PERC 965 support) and `bonding` kernel modules to default-image |
+| 1 | rhel97-updatemodules.txt | Adds `mpi3mr` (PERC 965 support), `bonding`, and `8021q` (VLAN tagging) kernel modules to default-image |
 | 2 | rhel97-modulecleanup.txt | Removes legacy SCSI/RAID/network drivers and ext3 (absent in RHEL 9.7) |
 | 3 | rhel97-startup.txt | Rebuilds the default-image ramdisk after module changes |
 | 4 (optional) | bcm-ansible-fix-node001.txt | Corrects node001 boot interface IP if duplicate/incorrect |

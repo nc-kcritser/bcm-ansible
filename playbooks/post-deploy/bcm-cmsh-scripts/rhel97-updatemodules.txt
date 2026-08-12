@@ -3,4 +3,5 @@ use default-image
 kernelmodules
 add mpi3mr
 add bonding
+add 8021q 
 commit 

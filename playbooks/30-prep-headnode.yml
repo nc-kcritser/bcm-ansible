@@ -105,7 +105,7 @@
         enabled: yes
 
     - name: Set MariaDB root password
-      ansible.mysql.mysql_user:
+      ansible.mariadb.mariadb_user:
         name: root
         password: "{{ mysql_login_password }}"
         login_unix_socket: /var/lib/mysql/mysql.sock

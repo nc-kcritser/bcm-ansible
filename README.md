@@ -48,13 +48,11 @@ bcm-ansible/
     │   ├── requirements-collections.yml              # Ansible collections
     │   └── requirements-pip.txt                      # Python packages
     └── scripts/                                       # Wrapper scripts
-        ├── 00-ssh-keygen-controllernode.sh
         ├── 01-controller-setup.sh
         ├── run-10-prep-captureserver.sh
         ├── run-20-grab-host-image.sh
         ├── run-30-prep-headnode.sh
         ├── run-40-modify-installer-rhel97.sh
-        ├── run-54-install-bcm-dvd-local.sh
         └── run-55-install-bcm-cmrepo-local.sh
 ```
 
@@ -100,7 +98,7 @@ Playbooks 10 and 30 verify this lock on RHEL targets and **fail immediately** if
   - `community.general`
   - `community.crypto`
   - `community.mysql`
-  - `ansible.mysql`
+  - `ansible.mariadb`
   - `ansible.utils`
   - `ansible.posix`
 - **Python Packages:** See `playbooks/prereqs/requirements-pip.txt`
@@ -171,7 +169,7 @@ Then proceed to Step 2 (Prepare Image Capture Target) in the workflow below, usi
 #### Step 0: Generate SSH Key (one-time on control node)
 
 ```bash
-playbooks/scripts/00-ssh-keygen-controllernode.sh
+ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N ""
 ```
 
 Generates `~/.ssh/id_ed25519` (ed25519 key, no passphrase). Required so the controller can SSH into target head nodes.
@@ -336,8 +334,8 @@ Never commit `playbooks/.vault_pass` or the vault password itself.
 Follow these steps in order to deploy BCM on a RHEL 9.x head node.
 
 ### Step 0: Generate SSH Key
-**Script:** `playbooks/scripts/00-ssh-keygen-controllernode.sh`  
-**When:** One-time on a fresh control node.  
+**When:** One-time on a fresh control node (controller method only).  
+**Command:** `ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N ""`  
 **What:** Generates ed25519 SSH keypair at `~/.ssh/id_ed25519`.
 
 ### Step 1: Set Up Control Node
@@ -383,8 +381,12 @@ Follow these steps in order to deploy BCM on a RHEL 9.x head node.
 ### Step 6: Install BCM (choose one path)
 
 #### Path A: Install from DVD
-**Script:** `playbooks/scripts/run-54-install-bcm-dvd-local.sh`  
 **Playbook:** `playbooks/54-install-bcm-dvd.yaml`  
+**Command:**
+```bash
+cd playbooks
+ansible-playbook -i inventory/localhost 54-install-bcm-dvd.yaml
+```
 **Requirements:**  
 - `install_medium: dvd` in `cluster-install-method.yml`
 - ISO file at path specified by `install_medium_dvd_path`
@@ -429,7 +431,7 @@ Or copy/paste commands interactively.
 | Script | Purpose |
 |---|---|
 | `bcm-ansible-fix-node001.txt` | Corrects node001's boot interface IP to `172.16.0.101`. Run if node has duplicate or incorrect IP. |
-| `rhel97-updatemodules.txt` | Adds `mpi3mr` and `bonding` kernel modules to `default-image`. Needed for RHEL 9.7. |
+| `rhel97-updatemodules.txt` | Adds `mpi3mr`, `bonding`, and `8021q` kernel modules to `default-image`. Needed for RHEL 9.7. |
 | `rhel97-modulecleanup.txt` | Removes legacy/conflicting kernel modules from `default-image` (virtio, old SCSI drivers). Needed for RHEL 9.7. |
 | `rhel97-startup.txt` | Rebuilds ramdisk for `default-image`. Run after any module changes. |
 

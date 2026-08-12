@@ -16,4 +16,4 @@ remove sata_svw
 remove virtio 
 remove virtio_pci 
 remove virtio_ring
-commit -w
+commit 

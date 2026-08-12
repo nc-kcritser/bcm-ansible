@@ -32,9 +32,9 @@ Deploy BCM 11.x directly on the target RHEL 9.x head node (no separate control n
 
 On the target head node:
 
-```bash
-- Extract bundle in /root
+Extract the bundle in `/root`, then:
 
+```bash
 cd bcm-ansible/playbooks/scripts
 ./run-01-controller-setup.sh
 ```
@@ -143,7 +143,41 @@ mysql_login_password: <password>
 
 ---
 
-## Step 5: Prepare Head Node
+## Step 5: Lock RHEL Release and Prepare Image-Capture Target
+
+**Before this step:** lock the RHEL minor release on the capture target. The lock is baked into the captured image and carries into every compute node deployed from it.
+
+```bash
+subscription-manager release --set=9.7   # or 9.6, to match your deployment
+dnf clean all
+subscription-manager release --show
+```
+
+Then prepare the capture target:
+
+```bash
+cd playbooks/scripts
+./run-10-prep-captureserver.sh --local
+```
+
+This playbook verifies the release lock, installs EPEL and Python modules, and disables SELinux. **If SELinux was disabled, reboot before proceeding to Step 6.**
+
+---
+
+## Step 6: Capture Base Image
+
+```bash
+cd playbooks/scripts
+./run-20-grab-host-image.sh --local
+```
+
+Output: `RHEL9-compute-clone.tar.gz` (or the filename configured in `cluster-settings.yml`). The archive must be at the path specified in `post_install_default_image_archive` before running Step 9.
+
+---
+
+## Step 7: Prepare Head Node
+
+**Before this step:** lock the RHEL minor release on the head node (same command as Step 5) if not already done.
 
 Configure the head node for BCM installation:
 
@@ -162,26 +196,24 @@ This playbook:
 
 ---
 
-## Step 6: (RHEL 9.7 Only) Patch Installer Collection
+## Step 8: (RHEL 9.7 Only) Patch Installer Collection
 
 If deploying to RHEL 9.7, patch the installed collection on this node:
 
-The NVIDIA/Bright method is to use known paths, then upgrade after the installation is complete. This is has been tested 
-
 ```bash
-cd playbooks
-ansible-playbook 40-modify-installer-rhel97.yml -i inventory/localhost
+cd playbooks/scripts
+./run-40-modify-installer-rhel97.sh
 ```
 
 This adds RHEL 9.7 support to the locally installed `brightcomputing.installer110` collection.
 
-**Required:** Only tested with collection version `31.1.452+git66ec186`.
+**Required:** Only tested with collection versions `31.1.452+git66ec186` and `33.0.48+git940b822`.
 
 See [RHEL 9.7 Guide](docs/rhel97-guide.md) for details.
 
 ---
 
-## Step 7: Install BCM
+## Step 9: Install BCM
 
 Choose one installation method:
 
@@ -190,15 +222,8 @@ Choose one installation method:
 Ensure the ISO is at the path specified in `cluster-install-method.yml` (`install_medium_dvd_path`).
 
 ```bash
-cd playbooks/scripts
-./run-54-install-bcm-dvd-local.sh --local
-```
-
-Or without the flag (defaults to `--local`):
-
-```bash
-cd playbooks/scripts
-./run-54-install-bcm-dvd-local.sh
+cd playbooks
+ansible-playbook -i inventory/localhost 54-install-bcm-dvd.yaml
 ```
 
 ### Method B: Install from Local Yum Repository
@@ -248,7 +273,7 @@ See [RHEL 9.7 Guide](docs/rhel97-guide.md) for details.
 
 ## Troubleshooting
 
-### "SELinux still enabled" after step 5
+### "SELinux still enabled" after step 5 or 7
 
 A reboot is required. The playbook warns about this:
 
@@ -256,11 +281,11 @@ A reboot is required. The playbook warns about this:
 reboot
 ```
 
-Then proceed to step 6/7.
+Then proceed to the next step.
 
 ### "MariaDB root password already set"
 
-Safe to re-run step 5. The playbook uses `ignore_errors` for password-set tasks.
+Safe to re-run step 7. The playbook uses `ignore_errors` for password-set tasks.
 
 ### "ISO not found" during BCM installation
 
@@ -276,13 +301,12 @@ cp files/cm.repo /root/cm.repo
 
 ### Collection version mismatch (RHEL 9.7)
 
-Step 6 warns if the collection version differs from the tested version. Re-test before proceeding to production.
+Step 8 warns if the collection version differs from the tested version. Re-test before proceeding to production.
 
 ---
 
 ## References
 
 - [Main README](README.md)
-- [Controller-Based Method Guide](readme-controller-method.md)
 - [RHEL 9.7 Guide](docs/rhel97-guide.md)
 
