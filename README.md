@@ -41,7 +41,7 @@ bcm-ansible/
     │   ├── hosts                                      # Remote hosts inventory
     │   └── localhost                                  # Local execution inventory
     ├── post-deploy/                                  # Post-installation utilities
-    │   ├── bcm-cmsh-scripts/                         # CMsh command transcripts
+    │   ├── bcm-cmsh-scripts/                         # CMSH command transcripts
     │   │   ├── bcm-ansible-fix-node001.txt
     │   │   ├── rhel97-modulecleanup.txt
     │   │   ├── rhel97-startup.txt
@@ -336,9 +336,9 @@ Checks:
 - Cluster devices via `cmsh`
 - Timeserver configuration via `cmsh`
 
-### CMsh Scripts
+### CMSH Scripts
 
-Interactive CMsh command transcripts in `playbooks/post-deploy/bcm-cmsh-scripts/`. Run via:
+Interactive CMSH command transcripts in `playbooks/post-deploy/bcm-cmsh-scripts/`. Run via:
 
 ```bash
 cmsh -f scriptname.txt -q -x
@@ -407,8 +407,8 @@ A reboot is required. Playbook 30 warns about this.
 ### Missing image archive at install time
 Verify the path specified in `post_install_default_image_archive` exists on the head node and is readable.
 
-### CMsh device IP conflict after install
-Run the CMsh script `playbooks/post-deploy/bcm-cmsh-scripts/bcm-ansible-fix-node001.txt` to correct the IP.
+### CMSH device IP conflict after install
+Run the CMSH script `playbooks/post-deploy/bcm-cmsh-scripts/bcm-ansible-fix-node001.txt` to correct the IP.
 
 ### No timeservers configured after install
 Run the fix command shown in the output of `validate-system-health-postdeploy.sh`:
