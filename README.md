@@ -1,6 +1,6 @@
 # BCM 11.x Ansible Automation for RHEL 9.x
 
-Automated deployment of Bright Cluster Manager (BCM) 11.x on RHEL 9.x head nodes using Ansible. This repo provides six numbered playbooks that execute in sequence, supporting both DVD-based and local yum repository installation methods. **Note:** RHEL 9.7 deployments require an additional patch step (see [RHEL 9.7 Guide](docs/rhel97-guide.md)).
+Automated deployment of Bright Cluster Manager (BCM) 11.x on RHEL 9.x head nodes using Ansible. This repo provides six numbered playbooks that execute in sequence, supporting ISO and local yum repository installation methods. **Note:** RHEL 9.7 deployments require an additional patch step (see [RHEL 9.7 Guide](docs/rhel97-guide.md)).
 
 ---
 
@@ -59,7 +59,6 @@ bcm-ansible/
         ├── run-20-grab-host-image.sh
         ├── run-30-prep-headnode.sh
         ├── run-40-modify-installer-rhel97.sh
-        ├── run-54-install-bcm-dvd-local.sh.legacy        # Retired DVD wrapper (for reference)
         ├── run-55-install-bcm-cmrepo-local.sh
         ├── setup-vault-password.sh
         └── vault-pass-prompt.sh
@@ -297,7 +296,6 @@ Follow these steps in order to deploy BCM on a RHEL 9.x head node.
 **Note:** Must be re-applied after any collection upgrade.
 
 ### Step 6: Install BCM
-#### Path: Install from Local Yum Repository
 **Script:** `playbooks/scripts/run-55-install-bcm-cmrepo-local.sh`  
 **Playbook:** `playbooks/55-install-bcm-cmrepo-local.yaml`  
 **Requirements:**  

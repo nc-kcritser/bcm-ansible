@@ -18,9 +18,12 @@ All notable changes to bcm-ansible are documented here.
 - `docs/bcm-deployment-guide.md` and `docs/bcm-deployment-guide-direct.md`: vault password section corrected — documents all three sources (env var, persisted `.vault_pass`, interactive prompt) and removes the incorrect claim that no password is stored on disk.
 - SSH key generation (controller method) is now manual (`ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519 -N ""`); the `00-ssh-keygen-controllernode.sh` wrapper is removed.
 - DVD install (playbook 54) is now invoked directly via `ansible-playbook`; `run-54-install-bcm-dvd-local.sh` is retired to `.legacy`.
+- `cleanup-deployed-image-with-cuda.sh`: rewritten to accept `-i/--image <imagename>` flag (was positional `$1`); NVIDIA/CUDA removal section extracted to separate script; old kernel tree removal renumbered to Step 5.
+- `remove-cuda-default-image.sh` renamed to `remove-cuda-from-image.sh`: rewritten with shebang, proper header, `-i/--image <imagename>` flag, and explicit error handling.
+- `README.md`: all controller-based deployment content removed; ISO/DVD install option removed from Step 6 — only the local yum repo method remains.
 
 ### Fixed
-- Post-deploy scripts (`cleanup-deployed-image-with-cuda.sh`, `cleanup-rhel-subsciptions.sh`, `remove-cuda-default-image.sh`, `validate-system-health-postdeploy.sh`) marked executable.
+- Post-deploy scripts (`cleanup-deployed-image-with-cuda.sh`, `cleanup-rhel-subsciptions.sh`, `remove-cuda-from-image.sh`, `validate-system-health-postdeploy.sh`) marked executable.
 - Dead link to `readme-controller-method.md` removed from `readme-direct-method.md`.
 - Bullet-point prose (`- Extract bundle in /root`) moved out of a bash code block in `readme-direct-method.md`.
 - `ansible.mysql` (non-existent collection) replaced with `ansible.mariadb` in `README.md` dependency list and both formal guides.
@@ -29,6 +32,8 @@ All notable changes to bcm-ansible are documented here.
 - `playbooks/scripts/run-54-install-bcm-dvd-local.sh` — retired (kept as `.legacy` for reference).
 - `playbooks/scripts/00-ssh-keygen-controllernode.sh` — SSH key generation is now a manual step.
 - `readme-controller-method.md` — controller-method guide taken offline pending full end-to-end testing.
+- Controller-based deployment content removed from `README.md` (Method 2 section, controller setup steps, `--hosts`/`--local` flag references).
+- ISO/DVD install path removed from `README.md` Step 6; only the local CM repo install method is documented.
 
 ---
 
