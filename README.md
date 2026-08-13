@@ -296,20 +296,8 @@ Follow these steps in order to deploy BCM on a RHEL 9.x head node.
 **Warning:** Only tested with collection versions `31.1.452+git66ec186` and `33.0.48+git940b822`. See [RHEL 9.7 Guide](docs/rhel97-guide.md) for details.  
 **Note:** Must be re-applied after any collection upgrade.
 
-### Step 6: Install BCM (choose one path)
-
-#### Path A: Install from DVD
-**Playbook:** `playbooks/54-install-bcm-dvd.yaml`  
-**Command:**
-```bash
-cd playbooks
-ansible-playbook -i inventory/localhost 54-install-bcm-dvd.yaml
-```
-**Requirements:**  
-- `install_medium: dvd` in `cluster-install-method.yml`
-- ISO file at path specified by `install_medium_dvd_path`
-
-#### Path B: Install from Local Yum Repository
+### Step 6: Install BCM
+#### Path: Install from Local Yum Repository
 **Script:** `playbooks/scripts/run-55-install-bcm-cmrepo-local.sh`  
 **Playbook:** `playbooks/55-install-bcm-cmrepo-local.yaml`  
 **Requirements:**  
