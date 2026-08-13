@@ -336,8 +336,8 @@ Checks BCM service states (tftpd, cmd, dhcpd, mariadb), disk usage thresholds, d
 
 | Script | Purpose |
 |---|---|
-| `cleanup-deployed-image-with-cuda.sh <image-path>` | Removes firmware, desktop, audio, NVIDIA/CUDA packages, and old kernel trees from a BCM image directory |
-| `remove-cuda-default-image.sh` | Removes NVIDIA/CUDA packages from `/cm/images/default-no-cuda/` only |
+| `cleanup-deployed-image-with-cuda.sh -i <imagename>` | Removes firmware, desktop, audio, and old kernel trees from a BCM image (`/cm/images/<imagename>`) |
+| `remove-cuda-from-image.sh -i <imagename>` | Removes NVIDIA/CUDA packages from a BCM image (`/cm/images/<imagename>`) |
 | `cleanup-rhel-subsciptions.sh [image-path]` | Unregisters RHEL subscriptions from the local system or an image installroot |
 
 ---

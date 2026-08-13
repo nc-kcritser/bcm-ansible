@@ -1,17 +1,39 @@
 #!/bin/bash
 # BCM Image Cleanup Script
-# Removes unnecessary packages and bloat from Bright Cluster Manager default images
-# Usage: ./bcm-image-cleanup.sh /path/to/image
+# Removes firmware, desktop, audio, NVIDIA/CUDA packages, and old kernel trees from a BCM image.
+# Usage: ./cleanup-deployed-image-with-cuda.sh -i <imagename>
+# Example: ./cleanup-deployed-image-with-cuda.sh -i default-nocuda
 
 set -e
 
-if [ -z "$1" ]; then
-    echo "Usage: $0 /path/to/image"
-    echo "Example: $0 /cm/images/default-nocuda"
+usage() {
+    echo "Usage: $0 -i <imagename>"
+    echo "       $0 --image <imagename>"
+    echo "Example: $0 -i default-nocuda"
     exit 1
+}
+
+IMAGE_NAME=""
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -i|--image)
+            IMAGE_NAME="$2"
+            shift 2
+            ;;
+        *)
+            echo "Unknown option: $1"
+            usage
+            ;;
+    esac
+done
+
+if [[ -z "$IMAGE_NAME" ]]; then
+    echo "Error: image name is required."
+    usage
 fi
 
-IMGROOT="$1"
+IMGROOT="/cm/images/${IMAGE_NAME}"
 
 if [ ! -d "$IMGROOT" ]; then
     echo "Error: Image directory $IMGROOT does not exist"
@@ -55,14 +77,7 @@ echo "Step 4: Removing other unnecessary packages..."
 dnf_remove colord\* libwacom\* ModemManager-glib bluez-libs flatpak\*
 
 echo ""
-echo "Step 5: Removing NVIDIA driver packages..." 
-dnf_remove nvidia-driver nvidia-driver-cuda nvidia-fabricmanager 
-dnf_remove nvidia-driver-cuda-libs nvidia-driver-libs
-dnf_remove kmod-nvidia-open-dkms nvidia-kmod-common nvidia-modprobe nvidia-persistenced nvidia-imex
-dnf_remove libnvidia-\* nvidia-libXNVCtrl\*
-
-echo ""
-echo "Step 6: Removing old kernel modules..."
+echo "Step 5: Removing old kernel modules..."
 CURRENT_KERNEL=$(ls -t $IMGROOT/usr/lib/modules/ 2>/dev/null | head -1)
 if [ -n "$CURRENT_KERNEL" ]; then
     echo "[kernels] Keeping: $CURRENT_KERNEL"
@@ -70,7 +85,7 @@ if [ -n "$CURRENT_KERNEL" ]; then
 fi
 
 echo ""
-echo "Step 7: Cleaning package manager cache..."
+echo "Step 6: Cleaning package manager cache..."
 dnf clean all --installroot=$IMGROOT
 
 echo ""
